@@ -7,4 +7,4 @@ Allow: /
 User-agent: ChatGPT-User
 Allow: /
 
-Sitemap: https://kantan.snkisk.com/sitemap.xml
+Sitemap: https://genkou.snkisk.com/sitemap.xml

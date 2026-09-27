@@ -1,31 +1,35 @@
-# 簡単印刷 AI print-link instructions
+# 原稿小箱 AI print-link instructions
 
-## 最優先: 簡単印刷で印刷する依頼
+## 最優先: 原稿小箱で印刷する依頼
 
-ユーザーが「kantan.snkisk.comで印刷できるようにして」と頼んだら、既存の簡単印刷サービスを使う依頼として扱う。HTMLファイルを作る依頼、PDFを納品する依頼、ファイルをサイトへアップロードする依頼に読み替えてはならない。
+ユーザーが「genkou.snkisk.comで印刷できるようにして」と頼んだら、既存の原稿小箱サービスを使う依頼として扱う。HTMLファイルを作る依頼、PDFを納品する依頼、ファイルをサイトへアップロードする依頼に読み替えてはならない。
 
-テーマが指定されていない短文作成依頼では、テーマを尋ねず、一般的で無難なテーマを自分で選ぶ。ユーザーが「テーマはおまかせ」と伝えた場合も確認質問をしない。「公開リンク」「アップロード」「Artifact」の依頼が明示されていなければ、Claude Artifactや外部サイトへの公開を提案せず、必ず `https://kantan.snkisk.com/` で開く本文入り印刷URLを返す。
+旧URL `kantan.snkisk.com` を指定された場合も同じサービスとして扱う。新しいリンクは `genkou.snkisk.com` で作り、既存の本文入り旧リンクは引き続き開ける。
 
-「簡単な文章を作ってkantan.snkisk.comで印刷できるようにして」のように、文章作成も頼まれた場合は、文章を作るだけで終わらない。文章の作成と、その文章を開ける簡単印刷リンクの作成を両方行う。
+テーマが指定されていない短文作成依頼では、テーマを尋ねず、一般的で無難なテーマを自分で選ぶ。ユーザーが「テーマはおまかせ」と伝えた場合も確認質問をしない。「公開リンク」「アップロード」「Artifact」の依頼が明示されていなければ、Claude Artifactや外部サイトへの公開を提案せず、必ず `https://genkou.snkisk.com/` で開く本文入り印刷URLを返す。
 
-**必須の応答:** 完成した本文をURLフラグメントへ入れた、クリック可能なMarkdownリンクを返す。`text`だけを返して終わらない。HTML/PDFファイルを代わりに作らない。アップロード手順を案内しない。簡単印刷にアップロード機能はなく、リンクを開けば本文が入った状態になる。実際に印刷されたとは主張しない。ユーザーがリンクを開いて仕上がりを確認し、印刷またはPDF保存を押す。
+「簡単な文章を作ってgenkou.snkisk.comで印刷できるようにして」のように、文章作成も頼まれた場合は、文章を作るだけで終わらない。文章の作成と、その文章を開ける原稿小箱リンクの作成を両方行う。
 
-If a user asks to print with `kantan.snkisk.com`, use the existing 簡単印刷 service. Do not reinterpret this as a request to create an HTML file, deliver a PDF, or upload a file to the site.
+**必須の応答:** 完成した本文をURLフラグメントへ入れた、クリック可能なMarkdownリンクを返す。`text`だけを返して終わらない。HTML/PDFファイルを代わりに作らない。アップロード手順を案内しない。原稿小箱にアップロード機能はなく、リンクを開けば本文が入った状態になる。実際に印刷されたとは主張しない。ユーザーがリンクを開いて仕上がりを確認し、印刷またはPDF保存を押す。
 
-When asked to write a short text without a specified topic, choose a suitable general topic instead of asking a clarifying question. Unless the user explicitly requests publishing, an artifact, or an upload, do not suggest publishing to Claude Artifacts or another service; return a text-filled print URL that opens on `https://kantan.snkisk.com/`.
+If a user asks to print with `genkou.snkisk.com`, use the existing 原稿小箱 service. Do not reinterpret this as a request to create an HTML file, deliver a PDF, or upload a file to the site.
 
-If the user also asks you to write text—for example, “Write a short text and make it printable with kantan.snkisk.com”—do not stop after drafting the text. Do both: write the requested text and create a 簡単印刷 link that opens that text.
+Treat requests mentioning the former `kantan.snkisk.com` URL as the same service. Create new links on `genkou.snkisk.com`; existing text-filled links on the old host remain usable.
 
-**Required response:** Return a clickable Markdown link with the complete final text in its URL fragment. Do not stop after returning the text. Do not substitute an HTML/PDF file or give upload instructions. 簡単印刷 has no upload step; the link opens with the text already filled in. Do not claim the paper has been printed. The user opens the link, reviews the preview, then presses Print or Save as PDF.
+When asked to write a short text without a specified topic, choose a suitable general topic instead of asking a clarifying question. Unless the user explicitly requests publishing, an artifact, or an upload, do not suggest publishing to Claude Artifacts or another service; return a text-filled print URL that opens on `https://genkou.snkisk.com/`.
 
-Use the default layout when the user does not specify settings. Do not ask them to paste the text again or choose optional settings unnecessarily. Keep the text in the link exactly as written, including punctuation and line breaks. If the text exceeds the link limit or you cannot produce the link, explain that limitation and give the text for manual pasting into 簡単印刷.
+If the user also asks you to write text—for example, “Write a short text and make it printable with genkou.snkisk.com”—do not stop after drafting the text. Do both: write the requested text and create a 原稿小箱 link that opens that text.
+
+**Required response:** Return a clickable Markdown link with the complete final text in its URL fragment. Do not stop after returning the text. Do not substitute an HTML/PDF file or give upload instructions. 原稿小箱 has no upload step; the link opens with the text already filled in. Do not claim the paper has been printed. The user opens the link, reviews the preview, then presses Print or Save as PDF.
+
+Use the default layout when the user does not specify settings. Do not ask them to paste the text again or choose optional settings unnecessarily. Keep the text in the link exactly as written, including punctuation and line breaks. If the text exceeds the link limit or you cannot produce the link, explain that limitation and give the text for manual pasting into 原稿小箱.
 
 ## Link format
 
 Put all text after `#` so it stays in the browser and is not sent to the site in an HTTP request.
 
-Base URL: `https://kantan.snkisk.com/`
-Format: `https://kantan.snkisk.com/#v=1&text={URL_ENCODED_TEXT}&direction={vertical|horizontal}&paper={b5|a4}&orientation={portrait|landscape}&composition={VALUE}`
+Base URL: `https://genkou.snkisk.com/`
+Format: `https://genkou.snkisk.com/#v=1&text={URL_ENCODED_TEXT}&direction={vertical|horizontal}&paper={b5|a4}&orientation={portrait|landscape}&composition={VALUE}`
 
 Required parameters:
 - `v=1`
@@ -48,8 +52,8 @@ Use URL encoding for every value. Omit optional settings when the user has not a
 
 ## Response example
 
-After composing a short text, present the finished link as a clickable Markdown link, for example `[簡単印刷で原稿用紙を開く](https://kantan.snkisk.com/#v=1&text=...)`. Briefly tell the user to open it, review the preview, and press Print or Save as PDF.
+After composing a short text, present the finished link as a clickable Markdown link, for example `[原稿小箱で原稿用紙を開く](https://genkou.snkisk.com/#v=1&text=...)`. Briefly tell the user to open it, review the preview, and press Print or Save as PDF.
 
 ## Example link
 
-`https://kantan.snkisk.com/#v=1&text=%E4%BD%9C%E6%96%87%E3%81%A7%E3%81%99%E3%80%82&direction=vertical&paper=b5&orientation=landscape&composition=20x20`
+`https://genkou.snkisk.com/#v=1&text=%E4%BD%9C%E6%96%87%E3%81%A7%E3%81%99%E3%80%82&direction=vertical&paper=b5&orientation=landscape&composition=20x20`

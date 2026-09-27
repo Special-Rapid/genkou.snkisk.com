@@ -4,9 +4,12 @@ export interface Env {
   }
 }
 
-const docsUrl = 'https://docs.kantan.snkisk.com/'
-const docsTitle = '簡単印刷の使い方｜AIで文章と印刷リンクを作る'
-const docsDescription = 'AIへの短い依頼文から、文章と本文入りの簡単印刷リンクを作る方法。リンクを開いて内容を確認してから印刷・PDF保存できます。'
+const homeUrl = 'https://genkou.snkisk.com/'
+const docsUrl = 'https://docs.genkou.snkisk.com/'
+const rootHosts = new Set(['genkou.snkisk.com', 'kantan.snkisk.com'])
+const documentationHosts = new Set(['docs.genkou.snkisk.com', 'docs.kantan.snkisk.com'])
+const docsTitle = '原稿小箱の使い方｜AIで文章と印刷リンクを作る'
+const docsDescription = 'AIへの短い依頼文から、文章と本文入りの原稿小箱リンクを作る方法。リンクを開いて内容を確認してから印刷・PDF保存できます。'
 
 function escapeAttribute(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')
@@ -32,13 +35,13 @@ export function renderDocumentationHtml(html: string): string {
   const structuredData = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: '簡単印刷',
-    alternateName: 'kantan.snkisk.com',
+    name: '原稿小箱',
+    alternateName: 'genkou.snkisk.com',
     url: docsUrl,
   })
   result = result.replace(/<script\b(?=[^>]*\bid=(['"])website-structured-data\1)[^>]*>[\s\S]*?<\/script>/i, `<script type="application/ld+json" id="website-structured-data">${structuredData}</script>`)
 
-  const fallback = `<main id="seo-fallback" class="seo-fallback"><p>簡単印刷の使い方</p><h1>AIの文章を、簡単印刷で原稿用紙に</h1><p>題材を伝えて文章と本文入りリンクをAIに依頼できます。リンクを開き、内容を確認してから印刷またはPDF保存してください。</p><p>本文と設定はURLの # より後ろに含まれます。この部分はサイトへ送信されませんが、リンクを受け取った人には本文が読めるため、秘密の文章や個人情報を含む内容は共有しないでください。</p><p><a href="https://kantan.snkisk.com/">簡単印刷を開く</a></p><p><a href="https://kantan.snkisk.com/llms.txt">AI向け印刷リンク仕様</a></p></main>`
+  const fallback = `<main id="seo-fallback" class="seo-fallback"><p>原稿小箱の使い方</p><h1>AIの文章を、原稿小箱で原稿用紙に</h1><p>題材を伝えて文章と本文入りリンクをAIに依頼できます。リンクを開き、内容を確認してから印刷またはPDF保存してください。</p><p>本文と設定はURLの # より後ろに含まれます。この部分はサイトへ送信されませんが、リンクを受け取った人には本文が読めるため、秘密の文章や個人情報を含む内容は共有しないでください。</p><p><a href="${homeUrl}">原稿小箱を開く</a></p><p><a href="${homeUrl}llms.txt">AI向け印刷リンク仕様</a></p></main>`
   return result.replace(/<main\b(?=[^>]*\bid=(['"])seo-fallback\1)[^>]*>[\s\S]*?<\/main>/i, fallback)
 }
 
@@ -55,8 +58,8 @@ function withUncompressedHtml(response: Response, html: string): Response {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
-    const isDocumentationHost = url.hostname === 'docs.kantan.snkisk.com'
-    const isRootHost = url.hostname === 'kantan.snkisk.com'
+    const isDocumentationHost = documentationHosts.has(url.hostname)
+    const isRootHost = rootHosts.has(url.hostname)
     const isDocsPage = (isDocumentationHost && (url.pathname === '/' || url.pathname === '/index.html'))
       || (isRootHost && url.pathname === '/docs')
     const isRootPage = isRootHost && url.pathname === '/'
@@ -76,7 +79,7 @@ export default {
 
     if (!isRootPage) return response
     const headers = new Headers(response.headers)
-    headers.append('Link', `<https://kantan.snkisk.com/llms.txt>; rel="alternate"; type="text/plain"; title*=UTF-8''${encodeURIComponent('簡単印刷 AI印刷リンク仕様')}`)
+    headers.append('Link', `<${homeUrl}llms.txt>; rel="alternate"; type="text/plain"; title*=UTF-8''${encodeURIComponent('原稿小箱 AI印刷リンク仕様')}`)
     return new Response(response.body, { status: response.status, statusText: response.statusText, headers })
   },
 }

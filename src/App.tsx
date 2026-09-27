@@ -212,7 +212,7 @@ function RootPrintPrompt({ prompt, labels }: { prompt: (typeof rootPromptCopy)[L
     <PromptCopyButton text={fullPrompt} labels={labels} compact>
       <span className="root-prompt-reserve" aria-hidden="true">{reservedPrompt}</span>
       <span className="root-prompt-visible" aria-hidden="true">
-        {prompt.prefix}<span className="root-prompt-subject-wrap"><span className="root-prompt-subject-reserve">{longestTopic}</span><TypewriterPrompt topics={prompt.topics} onTopicChange={setTopicIndex} /></span>{prompt.suffix}
+        {prompt.prefix}<span className="root-prompt-subject-wrap"><span className="root-prompt-subject-reserve">{prompt.topics[topicIndex]}</span><TypewriterPrompt topics={prompt.topics} onTopicChange={setTopicIndex} /></span>{prompt.suffix}
       </span>
     </PromptCopyButton>
   </div>
@@ -380,14 +380,14 @@ function ManuscriptPage({ direction, paper, paperOrientation, composition, cells
             : <div className="manuscript-grid" aria-label={hasText ? `${labels.sourceCount} ${manuscriptCharacters(cells.join('')).length}${labels.sourceSuffix}` : labels.blank}>{displayCells.map((cell, index) => <span key={index} className="manuscript-cell">{cell}</span>)}</div>}
       </div>
       {!hasText && <p className="empty-paper">{labels.blank}</p>}
-      {canShowServiceMark && <span className="service-mark" aria-hidden="true">簡単印刷</span>}
+      {canShowServiceMark && <span className="service-mark" aria-hidden="true">{labels.serviceName}</span>}
     </div>
     <div className="page-footer">{labels.page} {page} / {total}</div>
   </section>
 }
 
 export default function App() {
-  return window.location.hostname === 'docs.kantan.snkisk.com' || window.location.pathname === '/docs'
+  return ['docs.genkou.snkisk.com', 'docs.kantan.snkisk.com'].includes(window.location.hostname) || window.location.pathname === '/docs'
     ? <DocumentationApp />
     : <ManuscriptApp />
 }
@@ -422,7 +422,7 @@ function DocumentationApp() {
 
   return <main className="app-shell docs-shell">
     <header className="site-header">
-      <a className="brand" href="https://kantan.snkisk.com/" aria-label="簡単印刷 ホーム"><img src={brandIcon} alt="" aria-hidden="true" /><span>簡単印刷</span></a>
+      <a className="brand" href="https://genkou.snkisk.com/" aria-label={`${labels.serviceName} ${labels.home}`}><img src={brandIcon} alt="" aria-hidden="true" /><span>{labels.serviceName}</span></a>
       <div className="header-preferences">
         <LanguageToggle value={languagePreference} onChange={setLanguagePreference} labels={labels} />
         <ThemeToggle value={theme} onChange={setTheme} labels={labels} />
@@ -453,7 +453,7 @@ function DocumentationApp() {
         <p>{documentCopy.fallback}</p>
       </section>
 
-      <a className="docs-start-link" href="https://kantan.snkisk.com/">{documentCopy.start}</a>
+      <a className="docs-start-link" href="https://genkou.snkisk.com/">{documentCopy.start}</a>
     </article>
 
     <footer className="site-footer">
@@ -612,7 +612,7 @@ function ManuscriptApp() {
         if (index > 0) doc.addPage([selectedPaper.width, selectedPaper.height])
         doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, selectedPaper.width, selectedPaper.height)
       }
-      doc.save(`簡単印刷-${paper}-${direction}.pdf`)
+      doc.save(`原稿小箱-${paper}-${direction}.pdf`)
       setStatus({ tone: 'success', message: labels.pdfReady })
     } catch {
       setStatus({ tone: 'error', message: labels.pdfError, retryPdf: true })
@@ -633,7 +633,7 @@ function ManuscriptApp() {
 
   return <main className="app-shell">
     <header className="site-header">
-      <a className="brand" href="/" aria-label="簡単印刷 ホーム"><img src={brandIcon} alt="" aria-hidden="true" /><span>簡単印刷</span></a>
+      <a className="brand" href="/" aria-label={`${labels.serviceName} ${labels.home}`}><img src={brandIcon} alt="" aria-hidden="true" /><span>{labels.serviceName}</span></a>
       <div className="header-preferences">
         <LanguageToggle value={languagePreference} onChange={setLanguagePreference} labels={labels} />
         <ThemeToggle value={theme} onChange={setTheme} labels={labels} />
@@ -643,7 +643,7 @@ function ManuscriptApp() {
     <section className="home-intro" aria-labelledby="home-heading">
       <h1 id="home-heading">{homeCopy.heading}</h1>
       <p>{homeCopy.introduction}</p>
-      <a href="https://docs.kantan.snkisk.com/">{homeCopy.docsLink}</a>
+      <a href="https://docs.genkou.snkisk.com/">{homeCopy.docsLink}</a>
     </section>
 
     <RootPrintPrompt key={language} prompt={rootPromptCopy[language]} labels={documentationCopy[language]} />
@@ -670,7 +670,7 @@ function ManuscriptApp() {
             <label>{labels.gridColor}<span className="color-control"><input aria-label={labels.gridColor} type="color" value={gridColor} onChange={(event) => setGridColor(event.target.value)} /><output>{gridColor}</output></span></label>
             <div className="paper-orientation-control"><span id="paper-orientation-label">{labels.paperOrientation}</span><PaperOrientationControl value={paperOrientation} onChange={setPaperOrientation} labels={labels} labelId="paper-orientation-label" /></div>
             <label className="mark-control"><input type="checkbox" checked={autoParagraphIndent} onChange={(event) => setAutoParagraphIndent(event.target.checked)} /><span>{labels.paragraphIndent}</span></label>
-            <label className="mark-control"><input type="checkbox" checked={showServiceMark} onChange={(event) => setShowServiceMark(event.target.checked)} /><span>{language === 'ja' ? '紙面左下に 簡単印刷 を入れる' : 'Add 簡単印刷 at the lower left'}</span></label>
+            <label className="mark-control"><input type="checkbox" checked={showServiceMark} onChange={(event) => setShowServiceMark(event.target.checked)} /><span>{labels.serviceMark}</span></label>
           </div>
         </details>
 

@@ -6,7 +6,7 @@
   </defs>
   <rect width="1200" height="630" fill="#171717" />
   <rect x="73" y="68" width="1060" height="494" rx="24" fill="#202020" stroke="#454545" stroke-width="2" />
-  <text x="206" y="133" fill="#f5f5f5" font-family="system-ui, 'Yu Gothic', sans-serif" font-size="42" font-weight="700">簡単印刷</text>
+  <text x="206" y="133" fill="#f5f5f5" font-family="system-ui, 'Yu Gothic', sans-serif" font-size="42" font-weight="700">原稿小箱</text>
   <text x="104" y="293" fill="#f5f5f5" font-family="system-ui, 'Yu Gothic', sans-serif" font-size="39" font-weight="700">原稿用紙を、かんたんに印刷</text>
   <text x="106" y="354" fill="#d5d5d5" font-family="system-ui, 'Yu Gothic', sans-serif" font-size="26">仕上がりを確認して、そのままPDF保存・印刷</text>
   <rect x="822" y="88" width="257" height="424" rx="6" fill="#fff" />
