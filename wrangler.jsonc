@@ -17,14 +17,6 @@
     {
       "pattern": "docs.genkou.snkisk.com",
       "custom_domain": true
-    },
-    {
-      "pattern": "kantan.snkisk.com",
-      "custom_domain": true
-    },
-    {
-      "pattern": "docs.kantan.snkisk.com",
-      "custom_domain": true
     }
   ],
   "observability": {

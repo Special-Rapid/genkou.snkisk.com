@@ -6,8 +6,9 @@ export interface Env {
 
 const homeUrl = 'https://genkou.snkisk.com/'
 const docsUrl = 'https://docs.genkou.snkisk.com/'
-const rootHosts = new Set(['genkou.snkisk.com', 'kantan.snkisk.com'])
-const documentationHosts = new Set(['docs.genkou.snkisk.com', 'docs.kantan.snkisk.com'])
+const rootHosts = new Set(['genkou.snkisk.com'])
+const documentationHosts = new Set(['docs.genkou.snkisk.com'])
+const retiredHosts = new Set(['kantan.snkisk.com', 'docs.kantan.snkisk.com'])
 const docsTitle = '原稿小箱の使い方｜AIで文章と印刷リンクを作る'
 const docsDescription = 'AIへの短い依頼文から、文章と本文入りの原稿小箱リンクを作る方法。リンクを開いて内容を確認してから印刷・PDF保存できます。'
 
@@ -58,6 +59,7 @@ function withUncompressedHtml(response: Response, html: string): Response {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url)
+    if (retiredHosts.has(url.hostname)) return new Response(null, { status: 404 })
     const isDocumentationHost = documentationHosts.has(url.hostname)
     const isRootHost = rootHosts.has(url.hostname)
     const isDocsPage = (isDocumentationHost && (url.pathname === '/' || url.pathname === '/index.html'))

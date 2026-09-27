@@ -67,25 +67,13 @@ describe('WorkerのAI仕様と文書host', () => {
     expect(html).toContain('https://docs.genkou.snkisk.com/')
   })
 
-  it('旧rootを転送せず表示し、保存本文と本文入りリンクを開ける状態に保つ', async () => {
+  it.each(['kantan.snkisk.com', 'docs.kantan.snkisk.com'])('廃止した%sのrootはWorkerで404を返す', async (host) => {
     const { env, requests } = withAssets()
-    const response = await worker.fetch(new Request('https://kantan.snkisk.com/#v=1&text=legacy'), env)
-    const html = await response.text()
+    const response = await worker.fetch(new Request(`https://${host}/#v=1&text=legacy`), env)
 
-    expect(response.status).toBe(200)
-    expect(requests).toEqual(['/'])
-    expect(html).toContain('https://genkou.snkisk.com/')
-    expect(response.headers.get('location')).toBeNull()
-  })
-
-  it('旧docs hostの表示とcanonicalを維持する', async () => {
-    const { env, requests } = withAssets()
-    const response = await worker.fetch(new Request('https://docs.kantan.snkisk.com/'), env)
-    const html = await response.text()
-
-    expect(requests).toEqual(['/docs'])
-    expect(html).toContain('<link rel="canonical" href="https://docs.genkou.snkisk.com/" />')
-    expect(response.headers.get('location')).toBeNull()
+    expect(response.status).toBe(404)
+    expect(await response.text()).toBe('')
+    expect(requests).toEqual([])
   })
 
   it('docs headの置換でcontent-length・encoding・etagを残さない', async () => {

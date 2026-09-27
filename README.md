@@ -51,8 +51,6 @@ npm run deploy
 
 Cloudflare Workers Static Assets を使用しています。`wrangler.jsonc` の `assets.directory` は `dist` です。
 
-## 公開URLの移行
+## 公開URL
 
-正規URLは `https://genkou.snkisk.com/`、使い方ページは `https://docs.genkou.snkisk.com/` です。Workerは従来の `kantan.snkisk.com` と `docs.kantan.snkisk.com` も受け付け、旧URLを即時転送しません。本文入りリンクの `#` 以降はサーバーへ送られず、ブラウザ保存の本文も旧オリジンにあるためです。旧URLの画面から本文を確認できる状態を保ったまま、検索用の正規URLと新しい案内リンクを新URLへ揃えます。
-
-公開時は、Cloudflareの新しい2つのカスタムドメインを既存Workerへ追加し、旧2つのカスタムドメインも残します。新旧4ホストのHTTPS、home/docs、`llms.txt`、robots/sitemap、静的アセット、本文入り印刷リンクを確認します。失敗した場合は新カスタムドメインの経路を外し、旧2ホストを維持したまま直前のWorker版へ戻します。
+正規URLは `https://genkou.snkisk.com/`、使い方ページは `https://docs.genkou.snkisk.com/` です。Workerのカスタムドメインはこの2ホストを使用します。公開後は両ホストのHTTPS、home/docs、`llms.txt`、robots/sitemap、静的アセット、本文入り印刷リンクを確認します。
