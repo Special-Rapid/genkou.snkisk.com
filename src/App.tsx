@@ -373,7 +373,7 @@ function ManuscriptPage({ direction, paper, paperOrientation, composition, cells
 }
 
 export default function App() {
-  return ['docs.genkou.snkisk.com', 'docs.kantan.snkisk.com'].includes(window.location.hostname) || window.location.pathname === '/docs'
+  return window.location.hostname === 'docs.genkou.snkisk.com' || window.location.pathname === '/docs'
     ? <DocumentationApp />
     : <ManuscriptApp />
 }

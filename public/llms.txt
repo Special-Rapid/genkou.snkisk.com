@@ -4,8 +4,6 @@
 
 ユーザーが「genkou.snkisk.comで印刷できるようにして」と頼んだら、既存の原稿小箱サービスを使う依頼として扱う。HTMLファイルを作る依頼、PDFを納品する依頼、ファイルをサイトへアップロードする依頼に読み替えてはならない。
 
-旧URL `kantan.snkisk.com` を指定された場合も同じサービスとして扱う。新しいリンクは `genkou.snkisk.com` で作り、既存の本文入り旧リンクは引き続き開ける。
-
 テーマが指定されていない短文作成依頼では、テーマを尋ねず、一般的で無難なテーマを自分で選ぶ。ユーザーが「テーマはおまかせ」と伝えた場合も確認質問をしない。「公開リンク」「アップロード」「Artifact」の依頼が明示されていなければ、Claude Artifactや外部サイトへの公開を提案せず、必ず `https://genkou.snkisk.com/` で開く本文入り印刷URLを返す。
 
 「簡単な文章を作ってgenkou.snkisk.comで印刷できるようにして」のように、文章作成も頼まれた場合は、文章を作るだけで終わらない。文章の作成と、その文章を開ける原稿小箱リンクの作成を両方行う。
@@ -13,8 +11,6 @@
 **必須の応答:** 完成した本文をURLフラグメントへ入れた、クリック可能なMarkdownリンクを返す。`text`だけを返して終わらない。HTML/PDFファイルを代わりに作らない。アップロード手順を案内しない。原稿小箱にアップロード機能はなく、リンクを開けば本文が入った状態になる。実際に印刷されたとは主張しない。ユーザーがリンクを開いて仕上がりを確認し、印刷またはPDF保存を押す。
 
 If a user asks to print with `genkou.snkisk.com`, use the existing 原稿小箱 service. Do not reinterpret this as a request to create an HTML file, deliver a PDF, or upload a file to the site.
-
-Treat requests mentioning the former `kantan.snkisk.com` URL as the same service. Create new links on `genkou.snkisk.com`; existing text-filled links on the old host remain usable.
 
 When asked to write a short text without a specified topic, choose a suitable general topic instead of asking a clarifying question. Unless the user explicitly requests publishing, an artifact, or an upload, do not suggest publishing to Claude Artifacts or another service; return a text-filled print URL that opens on `https://genkou.snkisk.com/`.
 
