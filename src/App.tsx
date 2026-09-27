@@ -96,7 +96,7 @@ type PromptCopyLabels = {
   copyPromptError: string
 }
 
-function PromptCopyButton({ text, labels, compact = false, children }: { text: string; labels: PromptCopyLabels; compact?: boolean; children?: ReactNode }) {
+function PromptCopyButton({ text, labels, compact = false, descriptionId, children }: { text: string; labels: PromptCopyLabels; compact?: boolean; descriptionId?: string; children?: ReactNode }) {
   const [status, setStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle')
   const latestText = useRef(text)
 
@@ -119,7 +119,7 @@ function PromptCopyButton({ text, labels, compact = false, children }: { text: s
   }
 
   return <div className={`prompt-copy-control${compact ? ' prompt-copy-control-compact' : ''}`}>
-    <button type="button" className="prompt-copy-button" onClick={copyPrompt} disabled={status === 'copying'} aria-busy={status === 'copying'} aria-label={compact ? labels.copyPrompt : undefined} title={compact ? labels.copyPrompt : undefined}>
+    <button type="button" className="prompt-copy-button" onClick={copyPrompt} disabled={status === 'copying'} aria-busy={status === 'copying'} aria-label={compact ? labels.copyPrompt : undefined} aria-describedby={descriptionId} title={compact ? labels.copyPrompt : undefined}>
       {compact
         ? <>
           {children}
@@ -137,9 +137,17 @@ function PromptCopyButton({ text, labels, compact = false, children }: { text: s
   </div>
 }
 
-function TypewriterPrompt({ topics, onTopicChange }: { topics: readonly string[]; onTopicChange: (index: number) => void }) {
+function RootPrintPrompt({ prompt, labels }: { prompt: (typeof rootPromptCopy)[Language]; labels: PromptCopyLabels & { promptGroupLabel: string } }) {
+  const [topicIndex, setTopicIndex] = useState(0)
+  const [focused, setFocused] = useState(false)
   const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-  const [visibleText, setVisibleText] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? topics[0] : '')
+  const [topicWidth, setTopicWidth] = useState<number | null>(null)
+  const measureRef = useRef<HTMLSpanElement>(null)
+  const measuredWidth = useRef<number | null>(null)
+  const currentTopic = prompt.topics[topicIndex]
+  const longestTopic = prompt.topics.reduce((longest, topic) => topic.length > longest.length ? topic : longest, prompt.topics[0])
+  const fullPrompt = `${prompt.prefix}${currentTopic}${prompt.suffix}`
+  const reservedPrompt = `${prompt.prefix}${longestTopic}${prompt.suffix}`
 
   useEffect(() => {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -149,72 +157,50 @@ function TypewriterPrompt({ topics, onTopicChange }: { topics: readonly string[]
   }, [])
 
   useEffect(() => {
-    if (topics.length === 0) return
-
     if (reducedMotion) {
-      onTopicChange(0)
-      setVisibleText(topics[0])
+      setTopicIndex(0)
       return
     }
+    if (focused) return
+    const timer = window.setTimeout(() => setTopicIndex((index) => (index + 1) % prompt.topics.length), 2600)
+    return () => window.clearTimeout(timer)
+  }, [prompt.topics, reducedMotion, focused, topicIndex])
 
-    let topicIndex = 0
-    let current = 0
-    let timer = 0
-    let phase: 'typing' | 'hold' | 'erasing' | 'pause' = 'typing'
-    onTopicChange(0)
-    setVisibleText('')
-
-    const advance = () => {
-      const topic = topics[topicIndex]
-      if (phase === 'typing') {
-        current = Math.min(topic.length, current + 1)
-        setVisibleText(topic.slice(0, current))
-        if (current === topic.length) {
-          phase = 'hold'
-          timer = window.setTimeout(advance, 1350)
-        } else {
-          timer = window.setTimeout(advance, 72)
-        }
-      } else if (phase === 'hold') {
-        phase = 'erasing'
-        timer = window.setTimeout(advance, 240)
-      } else if (phase === 'erasing') {
-        current = Math.max(0, current - 1)
-        setVisibleText(topic.slice(0, current))
-        if (current === 0) {
-          phase = 'pause'
-          timer = window.setTimeout(advance, 350)
-        } else {
-          timer = window.setTimeout(advance, 28)
-        }
+  useLayoutEffect(() => {
+    const subject = measureRef.current
+    if (!subject) return
+    let frame = 0
+    const updateWidth = () => {
+      const nextWidth = subject.getBoundingClientRect().width
+      if (nextWidth === measuredWidth.current) return
+      if (measuredWidth.current === null) {
+        measuredWidth.current = nextWidth
+        setTopicWidth(nextWidth)
       } else {
-        topicIndex = (topicIndex + 1) % topics.length
-        onTopicChange(topicIndex)
-        phase = 'typing'
-        timer = window.setTimeout(advance, 180)
+        measuredWidth.current = nextWidth
+        window.cancelAnimationFrame(frame)
+        frame = window.requestAnimationFrame(() => setTopicWidth(nextWidth))
       }
     }
+    updateWidth()
+    const observer = new ResizeObserver(updateWidth)
+    observer.observe(subject)
+    return () => {
+      observer.disconnect()
+      window.cancelAnimationFrame(frame)
+    }
+  }, [currentTopic])
 
-    timer = window.setTimeout(advance, 180)
-    return () => window.clearTimeout(timer)
-  }, [onTopicChange, reducedMotion, topics])
-
-  return <span className="root-prompt-subject-animated">{visibleText}</span>
-}
-
-function RootPrintPrompt({ prompt, labels }: { prompt: (typeof rootPromptCopy)[Language]; labels: PromptCopyLabels & { promptGroupLabel: string } }) {
-  const [topicIndex, setTopicIndex] = useState(0)
-  const longestTopic = prompt.topics.reduce((longest, topic) => topic.length > longest.length ? topic : longest, prompt.topics[0])
-  const fullPrompt = `${prompt.prefix}${prompt.topics[topicIndex]}${prompt.suffix}`
-  const reservedPrompt = `${prompt.prefix}${longestTopic}${prompt.suffix}`
-
-  return <div className="root-prompt" role="group" aria-label={labels.promptGroupLabel}>
-    <PromptCopyButton text={fullPrompt} labels={labels} compact>
+  return <div className="root-prompt" role="group" aria-label={labels.promptGroupLabel} onFocusCapture={() => setFocused(true)} onBlurCapture={(event) => {
+    if (!event.relatedTarget || !event.currentTarget.contains(event.relatedTarget as Node)) setFocused(false)
+  }}>
+    <PromptCopyButton text={fullPrompt} labels={labels} compact descriptionId="root-prompt-current-text">
       <span className="root-prompt-reserve" aria-hidden="true">{reservedPrompt}</span>
       <span className="root-prompt-visible" aria-hidden="true">
-        {prompt.prefix}<span className="root-prompt-subject-wrap"><span className="root-prompt-subject-reserve">{prompt.topics[topicIndex]}</span><TypewriterPrompt topics={prompt.topics} onTopicChange={setTopicIndex} /></span>{prompt.suffix}
+        {prompt.prefix}<span className="root-prompt-subject-wrap" style={{ width: topicWidth ?? undefined }}><span ref={measureRef} className="root-prompt-subject-measure">{currentTopic}</span><span key={topicIndex} className="root-prompt-subject-text">{currentTopic}</span></span>{prompt.suffix}
       </span>
     </PromptCopyButton>
+    <span id="root-prompt-current-text" hidden>{fullPrompt}</span>
   </div>
 }
 
