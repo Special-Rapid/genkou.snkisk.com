@@ -38,11 +38,19 @@ export const rootPromptCopy = {
     prefix: '',
     topics: ['大学の論文', '謝罪文', '読書感想文', 'お礼状'],
     suffix: 'を作って。genkou.snkisk.comの説明を読んで、同サイトで開く本文入り印刷URLを返して。追加の質問や公開は不要。',
+    copyText: '好きな題材で文章を作って。genkou.snkisk.comの説明を読んで、同サイトで開く本文入り印刷URLを返して。追加の質問や公開は不要。',
+    copyLabel: '題材例を除いた依頼文をコピー',
+    copyError: 'コピーできませんでした。下の依頼文を選択してコピーしてください。',
+    copyFallbackLabel: 'コピー用の依頼文',
   },
   en: {
     prefix: 'Write ',
     topics: ['a college essay', 'an apology letter', 'a book report', 'a thank-you letter'],
     suffix: '. Read genkou.snkisk.com\'s instructions and return a text-filled print URL that opens on that site. No follow-up questions or publishing.',
+    copyText: 'Choose a topic and write a piece of text. Read genkou.snkisk.com\'s instructions and return a text-filled print URL that opens on that site. No follow-up questions or publishing.',
+    copyLabel: 'Copy prompt without the example topic',
+    copyError: 'Could not copy. Select and copy the prompt below.',
+    copyFallbackLabel: 'Prompt to copy',
   },
 } as const
 

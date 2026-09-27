@@ -96,7 +96,7 @@ type PromptCopyLabels = {
   copyPromptError: string
 }
 
-function PromptCopyButton({ text, labels, compact = false, descriptionId, children }: { text: string; labels: PromptCopyLabels; compact?: boolean; descriptionId?: string; children?: ReactNode }) {
+function PromptCopyButton({ text, labels, compact = false, descriptionId, fallbackLabel, children }: { text: string; labels: PromptCopyLabels; compact?: boolean; descriptionId?: string; fallbackLabel?: string; children?: ReactNode }) {
   const [status, setStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle')
   const latestText = useRef(text)
 
@@ -131,9 +131,10 @@ function PromptCopyButton({ text, labels, compact = false, descriptionId, childr
         </>
         : status === 'copied' ? labels.copiedPrompt : status === 'copying' ? labels.copyingPrompt : labels.copyPrompt}
     </button>
-    <span className={status === 'error' ? 'prompt-copy-status' : 'sr-only'} role="status" aria-live="polite">
-      {status === 'copied' ? labels.copiedPrompt : status === 'error' ? labels.copyPromptError : ''}
+    <span className={status === 'error' || (status === 'copying' && compact) ? 'prompt-copy-status' : 'sr-only'} role="status" aria-live="polite">
+      {status === 'copied' ? labels.copiedPrompt : status === 'copying' ? labels.copyingPrompt : status === 'error' ? labels.copyPromptError : ''}
     </span>
+    {status === 'error' && compact && <textarea className="prompt-copy-fallback" aria-label={fallbackLabel} readOnly rows={4} value={text} />}
   </div>
 }
 
@@ -146,7 +147,6 @@ function RootPrintPrompt({ prompt, labels }: { prompt: (typeof rootPromptCopy)[L
   const measuredWidth = useRef<number | null>(null)
   const currentTopic = prompt.topics[topicIndex]
   const longestTopic = prompt.topics.reduce((longest, topic) => topic.length > longest.length ? topic : longest, prompt.topics[0])
-  const fullPrompt = `${prompt.prefix}${currentTopic}${prompt.suffix}`
   const reservedPrompt = `${prompt.prefix}${longestTopic}${prompt.suffix}`
 
   useEffect(() => {
@@ -194,13 +194,13 @@ function RootPrintPrompt({ prompt, labels }: { prompt: (typeof rootPromptCopy)[L
   return <div className="root-prompt" role="group" aria-label={labels.promptGroupLabel} onFocusCapture={() => setFocused(true)} onBlurCapture={(event) => {
     if (!event.relatedTarget || !event.currentTarget.contains(event.relatedTarget as Node)) setFocused(false)
   }}>
-    <PromptCopyButton text={fullPrompt} labels={labels} compact descriptionId="root-prompt-current-text">
+    <PromptCopyButton text={prompt.copyText} labels={{ ...labels, copyPrompt: prompt.copyLabel, copyPromptError: prompt.copyError }} compact descriptionId="root-prompt-current-text" fallbackLabel={prompt.copyFallbackLabel}>
       <span className="root-prompt-reserve" aria-hidden="true">{reservedPrompt}</span>
       <span className="root-prompt-visible" aria-hidden="true">
         {prompt.prefix}<span className="root-prompt-subject-wrap" style={{ width: topicWidth ?? undefined }}><span ref={measureRef} className="root-prompt-subject-measure">{currentTopic}</span><span key={topicIndex} className="root-prompt-subject-text">{currentTopic}</span></span>{prompt.suffix}
       </span>
     </PromptCopyButton>
-    <span id="root-prompt-current-text" hidden>{fullPrompt}</span>
+    <span id="root-prompt-current-text" hidden>{prompt.copyText}</span>
   </div>
 }
 

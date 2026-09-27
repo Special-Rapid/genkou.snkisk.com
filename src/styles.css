@@ -55,9 +55,10 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, summary:focu
 .root-prompt .prompt-copy-button-icon { grid-column: 2; grid-row: 1; display: grid; width: 22px; height: 22px; place-items: center; }
 .root-prompt .prompt-copy-button-icon svg { width: 18px; height: 18px; }
 .root-prompt .prompt-copy-status { grid-column: 1; width: auto; justify-self: stretch; }
+.root-prompt .prompt-copy-fallback { grid-column: 1; min-width: 0; min-height: 0; width: 100%; margin-top: var(--space-1); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); overflow-wrap: anywhere; user-select: text; }
 .root-prompt-reserve { visibility: hidden; pointer-events: none; }
 .root-prompt-visible { display: block; }
-.root-prompt-subject-wrap { position: relative; display: inline-block; overflow: hidden; vertical-align: baseline; white-space: nowrap; transition: width 420ms cubic-bezier(.22, 1, .36, 1); }
+.root-prompt-subject-wrap { position: relative; display: inline-block; overflow: clip; vertical-align: baseline; white-space: nowrap; transition: width 420ms cubic-bezier(.22, 1, .36, 1); }
 .root-prompt-subject-measure { position: absolute; inset: 0 auto auto 0; width: max-content; visibility: hidden; pointer-events: none; }
 .root-prompt-subject-text { display: inline-block; width: max-content; color: var(--ink); text-decoration: underline; text-decoration-color: var(--focus); text-decoration-thickness: 2px; text-underline-offset: 4px; animation: root-prompt-topic-enter 420ms cubic-bezier(.22, 1, .36, 1) both; }
 @keyframes root-prompt-topic-enter { from { opacity: 0; transform: translateY(.28em); } to { opacity: 1; transform: translateY(0); } }
