@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { copy, documentationCopy, homepageCopy, rootPromptCopy, type Labels, type Language } from './lib/copy'
 import { manuscriptCharacters, manuscriptDisplayCells, manuscriptPages, pageTotal, type Direction, type ManuscriptCell } from './lib/layout'
 import { gridMetricsForFrame, type GridMetrics } from './lib/grid-metrics'
@@ -96,8 +96,9 @@ type PromptCopyLabels = {
   copyPromptError: string
 }
 
-function PromptCopyButton({ text, labels, compact = false, descriptionId, fallbackLabel, children }: { text: string; labels: PromptCopyLabels; compact?: boolean; descriptionId?: string; fallbackLabel?: string; children?: ReactNode }) {
+function PromptCopyButton({ text, labels, compact = false, fallbackLabel }: { text: string; labels: PromptCopyLabels; compact?: boolean; fallbackLabel?: string }) {
   const [status, setStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle')
+  const [copiedText, setCopiedText] = useState('')
   const latestText = useRef(text)
 
   useEffect(() => {
@@ -105,24 +106,39 @@ function PromptCopyButton({ text, labels, compact = false, descriptionId, fallba
     setStatus((current) => current === 'error' || current === 'copying' ? current : 'idle')
   }, [text])
 
+  useEffect(() => {
+    if (status !== 'copied' || !compact) return
+    const timer = window.setTimeout(() => setStatus('idle'), 6500)
+    return () => window.clearTimeout(timer)
+  }, [status, compact])
+
   const copyPrompt = async () => {
     const promptToCopy = text
     setStatus('copying')
+    let timeout = 0
     try {
-      await navigator.clipboard.writeText(promptToCopy)
-      if (latestText.current === promptToCopy) setStatus('copied')
+      await Promise.race([
+        navigator.clipboard.writeText(promptToCopy),
+        new Promise<never>((_, reject) => { timeout = window.setTimeout(() => reject(new Error('Clipboard timeout')), 8000) }),
+      ])
+      if (latestText.current === promptToCopy) {
+        setCopiedText(promptToCopy)
+        setStatus('copied')
+      }
       else setStatus((current) => current === 'copying' ? 'idle' : current)
     } catch {
       if (latestText.current === promptToCopy) setStatus('error')
       else setStatus((current) => current === 'copying' ? 'idle' : current)
+    } finally {
+      window.clearTimeout(timeout)
     }
   }
 
   return <div className={`prompt-copy-control${compact ? ' prompt-copy-control-compact' : ''}`}>
-    <button type="button" className="prompt-copy-button" onClick={copyPrompt} disabled={status === 'copying'} aria-busy={status === 'copying'} aria-label={compact ? labels.copyPrompt : undefined} aria-describedby={descriptionId} title={compact ? labels.copyPrompt : undefined}>
+    <button type="button" className="prompt-copy-button" onClick={copyPrompt} onKeyDown={(event) => { if (event.key === 'Escape' && status === 'copied') setStatus('idle') }} disabled={status === 'copying'} aria-busy={status === 'copying'} aria-describedby={compact && status === 'copied' ? 'root-prompt-copied' : undefined}>
       {compact
         ? <>
-          {children}
+          <span>{labels.copyPrompt}</span>
           <span className="prompt-copy-button-icon" aria-hidden="true">{status === 'copied'
           ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4.2 4.2L19 6.8" /></svg>
           : status === 'error'
@@ -132,75 +148,16 @@ function PromptCopyButton({ text, labels, compact = false, descriptionId, fallba
         : status === 'copied' ? labels.copiedPrompt : status === 'copying' ? labels.copyingPrompt : labels.copyPrompt}
     </button>
     <span className={status === 'error' || (status === 'copying' && compact) ? 'prompt-copy-status' : 'sr-only'} role="status" aria-live="polite">
-      {status === 'copied' ? labels.copiedPrompt : status === 'copying' ? labels.copyingPrompt : status === 'error' ? labels.copyPromptError : ''}
+      {status === 'copied' ? `${labels.copiedPrompt}${compact ? `: ${copiedText}` : ''}` : status === 'copying' ? labels.copyingPrompt : status === 'error' ? labels.copyPromptError : ''}
     </span>
+    {status === 'copied' && compact && <span id="root-prompt-copied" className="prompt-copy-tooltip" role="tooltip"><strong>{labels.copiedPrompt}</strong><span>{copiedText}</span></span>}
     {status === 'error' && compact && <textarea className="prompt-copy-fallback" aria-label={fallbackLabel} readOnly rows={4} value={text} />}
   </div>
 }
 
 function RootPrintPrompt({ prompt, labels }: { prompt: (typeof rootPromptCopy)[Language]; labels: PromptCopyLabels & { promptGroupLabel: string } }) {
-  const [topicIndex, setTopicIndex] = useState(0)
-  const [focused, setFocused] = useState(false)
-  const [reducedMotion, setReducedMotion] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-  const [topicWidth, setTopicWidth] = useState<number | null>(null)
-  const measureRef = useRef<HTMLSpanElement>(null)
-  const measuredWidth = useRef<number | null>(null)
-  const currentTopic = prompt.topics[topicIndex]
-  const longestTopic = prompt.topics.reduce((longest, topic) => topic.length > longest.length ? topic : longest, prompt.topics[0])
-  const reservedPrompt = `${prompt.prefix}${longestTopic}${prompt.suffix}`
-
-  useEffect(() => {
-    const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const updatePreference = () => setReducedMotion(preference.matches)
-    preference.addEventListener('change', updatePreference)
-    return () => preference.removeEventListener('change', updatePreference)
-  }, [])
-
-  useEffect(() => {
-    if (reducedMotion) {
-      setTopicIndex(0)
-      return
-    }
-    if (focused) return
-    const timer = window.setTimeout(() => setTopicIndex((index) => (index + 1) % prompt.topics.length), 2600)
-    return () => window.clearTimeout(timer)
-  }, [prompt.topics, reducedMotion, focused, topicIndex])
-
-  useLayoutEffect(() => {
-    const subject = measureRef.current
-    if (!subject) return
-    let frame = 0
-    const updateWidth = () => {
-      const nextWidth = subject.getBoundingClientRect().width
-      if (nextWidth === measuredWidth.current) return
-      if (measuredWidth.current === null) {
-        measuredWidth.current = nextWidth
-        setTopicWidth(nextWidth)
-      } else {
-        measuredWidth.current = nextWidth
-        window.cancelAnimationFrame(frame)
-        frame = window.requestAnimationFrame(() => setTopicWidth(nextWidth))
-      }
-    }
-    updateWidth()
-    const observer = new ResizeObserver(updateWidth)
-    observer.observe(subject)
-    return () => {
-      observer.disconnect()
-      window.cancelAnimationFrame(frame)
-    }
-  }, [currentTopic])
-
-  return <div className="root-prompt" role="group" aria-label={labels.promptGroupLabel} onFocusCapture={() => setFocused(true)} onBlurCapture={(event) => {
-    if (!event.relatedTarget || !event.currentTarget.contains(event.relatedTarget as Node)) setFocused(false)
-  }}>
-    <PromptCopyButton text={prompt.copyText} labels={{ ...labels, copyPrompt: prompt.copyLabel, copyPromptError: prompt.copyError }} compact descriptionId="root-prompt-current-text" fallbackLabel={prompt.copyFallbackLabel}>
-      <span className="root-prompt-reserve" aria-hidden="true">{reservedPrompt}</span>
-      <span className="root-prompt-visible" aria-hidden="true">
-        {prompt.prefix}<span className="root-prompt-subject-wrap" style={{ width: topicWidth ?? undefined }}><span ref={measureRef} className="root-prompt-subject-measure">{currentTopic}</span><span key={topicIndex} className="root-prompt-subject-text">{currentTopic}</span></span>{prompt.suffix}
-      </span>
-    </PromptCopyButton>
-    <span id="root-prompt-current-text" hidden>{prompt.copyText}</span>
+  return <div className="root-prompt" role="group" aria-label={labels.promptGroupLabel}>
+    <PromptCopyButton text={prompt.copyText} labels={{ ...labels, copyPrompt: prompt.copyLabel, copyPromptError: prompt.copyError }} compact fallbackLabel={prompt.copyFallbackLabel} />
   </div>
 }
 

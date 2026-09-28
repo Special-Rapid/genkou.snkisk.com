@@ -35,20 +35,14 @@ const aiPrintPrompt = {
 
 export const rootPromptCopy = {
   ja: {
-    prefix: '',
-    topics: ['大学の論文', '謝罪文', '読書感想文', 'お礼状'],
-    suffix: 'を作って。genkou.snkisk.comの説明を読んで、同サイトで開く本文入り印刷URLを返して。追加の質問や公開は不要。',
-    copyText: 'を作って。genkou.snkisk.comの説明を読んで、同サイトで開く本文入り印刷URLを返して。追加の質問や公開は不要。',
-    copyLabel: '題材なしの依頼文をコピー',
+    copyText: 'genkou.snkisk.comの説明を読んで、同サイトで開く本文入り印刷URLを返して。追加の質問や公開は不要。',
+    copyLabel: 'AIプロンプトをコピー',
     copyError: 'コピーできませんでした。下の依頼文を選択してコピーしてください。',
     copyFallbackLabel: 'コピー用の依頼文',
   },
   en: {
-    prefix: 'Write ',
-    topics: ['a college essay', 'an apology letter', 'a book report', 'a thank-you letter'],
-    suffix: '. Read genkou.snkisk.com\'s instructions and return a text-filled print URL that opens on that site. No follow-up questions or publishing.',
-    copyText: 'Write the requested text. Read genkou.snkisk.com\'s instructions and return a text-filled print URL that opens on that site. No follow-up questions or publishing.',
-    copyLabel: 'Copy prompt without a topic',
+    copyText: 'Read genkou.snkisk.com\'s instructions and return a text-filled print URL that opens on that site. No follow-up questions or publishing.',
+    copyLabel: 'Copy AI prompt',
     copyError: 'Could not copy. Select and copy the prompt below.',
     copyFallbackLabel: 'Prompt to copy',
   },

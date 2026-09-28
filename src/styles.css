@@ -46,27 +46,17 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, summary:focu
 .prompt-copy-button:disabled { cursor: wait; opacity: .72; }
 .prompt-copy-button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
 .prompt-copy-status { min-height: 1.5em; margin: var(--space-1) 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
-.root-prompt { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; margin-top: var(--space-4); }
-.root-prompt .prompt-copy-control-compact { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: stretch; }
-.root-prompt .prompt-copy-control-compact .prompt-copy-button { grid-column: 1; grid-row: 1; width: 100%; min-width: 0; height: auto; min-height: 44px; place-items: stretch; padding: 10px 14px; }
-.root-prompt .prompt-copy-button { display: grid; grid-template-columns: minmax(0, 1fr) 22px; grid-template-rows: 1fr; align-items: center; gap: var(--space-2); width: 100%; min-width: 0; min-height: 44px; padding: 10px 14px; text-align: left; font-size: clamp(14px, 1.25vw, 16px); font-weight: 550; line-height: 1.6; }
-.root-prompt .prompt-copy-button:hover { border-color: var(--ink); }
-.root-prompt-reserve, .root-prompt-visible { grid-column: 1; grid-row: 1; min-width: 0; overflow-wrap: anywhere; white-space: normal; }
-.root-prompt .prompt-copy-button-icon { grid-column: 2; grid-row: 1; display: grid; width: 22px; height: 22px; place-items: center; }
+.root-prompt { display: flex; align-items: start; margin-top: var(--space-4); }
+.root-prompt .prompt-copy-control-compact { position: relative; display: grid; justify-items: start; max-width: 100%; }
+.root-prompt .prompt-copy-button { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; min-height: 44px; padding: 0 var(--space-2); }
+.root-prompt .prompt-copy-button-icon { display: grid; width: 22px; height: 22px; place-items: center; }
 .root-prompt .prompt-copy-button-icon svg { width: 18px; height: 18px; }
-.root-prompt .prompt-copy-status { grid-column: 1; width: auto; justify-self: stretch; }
-.root-prompt .prompt-copy-fallback { grid-column: 1; min-width: 0; min-height: 0; width: 100%; margin-top: var(--space-1); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); overflow-wrap: anywhere; user-select: text; }
-.root-prompt-reserve { visibility: hidden; pointer-events: none; }
-.root-prompt-visible { display: block; }
-.root-prompt-subject-wrap { position: relative; display: inline-block; overflow: clip; vertical-align: baseline; white-space: nowrap; transition: width 420ms cubic-bezier(.22, 1, .36, 1); }
-.root-prompt-subject-measure { position: absolute; inset: 0 auto auto 0; width: max-content; visibility: hidden; pointer-events: none; }
-.root-prompt-subject-text { display: inline-block; width: max-content; color: var(--ink); text-decoration: underline; text-decoration-color: var(--focus); text-decoration-thickness: 2px; text-underline-offset: 4px; animation: root-prompt-topic-enter 420ms cubic-bezier(.22, 1, .36, 1) both; }
-@keyframes root-prompt-topic-enter { from { opacity: 0; transform: translateY(.28em); } to { opacity: 1; transform: translateY(0); } }
-.prompt-copy-control-compact { display: contents; }
-.prompt-copy-control-compact .prompt-copy-button { display: grid; width: 44px; min-width: 44px; height: 44px; min-height: 44px; place-items: center; padding: 0; }
-.prompt-copy-control-compact .prompt-copy-button { grid-column: 2; grid-row: 1; }
+.root-prompt .prompt-copy-status { width: 100%; }
+.root-prompt .prompt-copy-fallback { min-width: 0; width: min(100%, 520px); margin-top: var(--space-1); padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--ink); overflow-wrap: anywhere; user-select: text; }
+.root-prompt .prompt-copy-tooltip { position: absolute; z-index: 3; top: calc(100% + var(--space-1)); left: 0; display: grid; gap: var(--space-1); width: min(520px, calc(100vw - 2 * var(--space-3))); padding: var(--space-2); border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); color: var(--ink); box-shadow: 0 8px 24px var(--shadow); overflow-wrap: anywhere; line-height: 1.6; }
+.root-prompt .prompt-copy-tooltip strong { font-size: 13px; }
+.prompt-copy-control-compact .prompt-copy-button { min-height: 44px; }
 .prompt-copy-control-compact .prompt-copy-button svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.prompt-copy-control-compact .prompt-copy-status { grid-column: 1 / -1; grid-row: 2; width: auto; justify-self: stretch; text-align: left; }
 .docs-start-link { display: inline-flex; min-height: 48px; align-items: center; margin-top: var(--space-5); padding: 0 var(--space-3); border: 1px solid var(--ink); border-radius: var(--radius); background: var(--ink); color: var(--bg); font-weight: 750; text-decoration: none; }
 .editor { padding-top: var(--space-2); }
 .field-group { border: 0; padding: 0; margin: 0 0 var(--space-3); min-width: 0; }
