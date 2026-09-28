@@ -16,6 +16,10 @@ const defaultLanguage = (): Language => {
   const locales = navigator.languages?.length ? navigator.languages : [navigator.language]
   for (const locale of locales) {
     const normalized = locale.toLowerCase()
+    if (normalized === 'ja' || normalized === 'en') return normalized
+  }
+  for (const locale of locales) {
+    const normalized = locale.toLowerCase()
     if (normalized === 'ja' || normalized.startsWith('ja-')) return 'ja'
     if (normalized === 'en' || normalized.startsWith('en-')) return 'en'
   }
@@ -56,6 +60,22 @@ function updateDocumentMetadata(title: string, description: string) {
   document.querySelector<HTMLMetaElement>('meta[name="twitter:description"]')?.setAttribute('content', description)
 }
 
+function updateHomeLanguageMetadata(language: Language) {
+  const canonicalUrl = `https://genkou.snkisk.com/${language}/`
+  document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', canonicalUrl)
+  document.querySelector<HTMLMetaElement>('meta[property="og:url"]')?.setAttribute('content', canonicalUrl)
+  document.querySelector<HTMLMetaElement>('meta[property="og:locale"]')?.setAttribute('content', language === 'ja' ? 'ja_JP' : 'en_US')
+  document.querySelector<HTMLMetaElement>('meta[property="og:image:alt"]')?.setAttribute('content', homepageCopy[language].imageAlt)
+  const structuredData = document.getElementById('website-structured-data')
+  if (structuredData) structuredData.textContent = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: '原稿小箱',
+    alternateName: 'genkou.snkisk.com',
+    url: canonicalUrl,
+  })
+}
+
 function updateThemeColor(theme: 'light' | 'dark') {
   document.documentElement.dataset.theme = theme
   const color = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
@@ -76,9 +96,22 @@ function persist(key: string, value: string) {
 
 function initialLanguagePreference(): LanguagePreference {
   const preference = stored<string>('kantan:language-preference', '')
-  if (preference === 'ja' || preference === 'en' || preference === 'system') return preference
-  const legacyLanguage = stored<string>('kantan:language', '')
-  return legacyLanguage === 'ja' || legacyLanguage === 'en' ? legacyLanguage : 'system'
+  if (preference === 'ja' || preference === 'en') return preference
+  if (preference === 'system' && stored<string>('kantan:language-manual', '') === 'true') return 'system'
+  if (preference !== 'system') {
+    const legacyLanguage = stored<string>('kantan:language', '')
+    if (legacyLanguage === 'ja' || legacyLanguage === 'en') return legacyLanguage
+  }
+  if (window.location.pathname === '/ja/') return 'ja'
+  if (window.location.pathname === '/en/') return 'en'
+  return 'system'
+}
+
+function hasManualLanguagePreference(): boolean {
+  const preference = stored<string>('kantan:language-preference', '')
+  return preference === 'ja' || preference === 'en'
+    || (preference === 'system' && stored<string>('kantan:language-manual', '') === 'true')
+    || (preference !== 'system' && ['ja', 'en'].includes(stored<string>('kantan:language', '')))
 }
 
 function InfoButton({ label, content }: { label: string; content: string }) {
@@ -337,16 +370,20 @@ export default function App() {
 
 function DocumentationApp() {
   const [languagePreference, setLanguagePreference] = useState<LanguagePreference>(initialLanguagePreference)
+  const shouldPersistLanguage = useRef(hasManualLanguagePreference())
+  const [systemLanguage, setSystemLanguage] = useState(defaultLanguage)
   const [theme, setTheme] = useState<Theme>(() => stored('kantan:theme', 'system'))
   const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
-  const language = languagePreference === 'system' ? defaultLanguage() : languagePreference
+  const language = languagePreference === 'system' ? systemLanguage : languagePreference
   const labels: Labels = copy[language]
   const documentCopy = documentationCopy[language]
   const brandIcon = brandIconSource(theme, systemDark)
 
   useEffect(() => {
-    persist('kantan:language-preference', languagePreference)
-    if (languagePreference !== 'system') persist('kantan:language', languagePreference)
+    if (shouldPersistLanguage.current) {
+      persist('kantan:language-preference', languagePreference)
+      if (languagePreference !== 'system') persist('kantan:language', languagePreference)
+    }
     document.documentElement.lang = language
     updateDocumentMetadata(documentCopy.title, documentCopy.description)
   }, [documentCopy.description, documentCopy.title, language, languagePreference])
@@ -359,15 +396,21 @@ function DocumentationApp() {
   }, [])
 
   useEffect(() => {
+    const updateSystemLanguage = () => setSystemLanguage(defaultLanguage())
+    window.addEventListener('languagechange', updateSystemLanguage)
+    return () => window.removeEventListener('languagechange', updateSystemLanguage)
+  }, [])
+
+  useEffect(() => {
     persist('kantan:theme', theme)
     updateThemeColor(theme === 'system' ? (systemDark ? 'dark' : 'light') : theme)
   }, [systemDark, theme])
 
   return <main className="app-shell docs-shell">
     <header className="site-header">
-      <a className="brand" href="https://genkou.snkisk.com/" aria-label={`${labels.serviceName} ${labels.home}`}><img src={brandIcon} alt="" aria-hidden="true" /><span>{labels.serviceName}</span></a>
+      <a className="brand" href={`https://genkou.snkisk.com/${language}/`} aria-label={`${labels.serviceName} ${labels.home}`}><img src={brandIcon} alt="" aria-hidden="true" /><span>{labels.serviceName}</span></a>
       <div className="header-preferences">
-        <LanguageToggle value={languagePreference} onChange={setLanguagePreference} labels={labels} />
+        <LanguageToggle value={languagePreference} onChange={(value) => { shouldPersistLanguage.current = true; persist('kantan:language-manual', 'true'); setLanguagePreference(value) }} labels={labels} />
         <ThemeToggle value={theme} onChange={setTheme} labels={labels} />
       </div>
     </header>
@@ -396,7 +439,7 @@ function DocumentationApp() {
         <p>{documentCopy.fallback}</p>
       </section>
 
-      <a className="docs-start-link" href="https://genkou.snkisk.com/">{documentCopy.start}</a>
+      <a className="docs-start-link" href={`https://genkou.snkisk.com/${language}/`}>{documentCopy.start}</a>
     </article>
 
     <footer className="site-footer">
@@ -410,6 +453,9 @@ function ManuscriptApp() {
   const [initialPrintLink] = useState<PrintLinkResult>(() => parsePrintLink(window.location.hash))
   const linkedSettings = initialPrintLink.kind === 'valid' ? initialPrintLink.payload : undefined
   const [languagePreference, setLanguagePreference] = useState<LanguagePreference>(initialLanguagePreference)
+  const shouldPersistLanguage = useRef(hasManualLanguagePreference())
+  const [useInitialRequestLanguage, setUseInitialRequestLanguage] = useState(() => !hasManualLanguagePreference() && window.location.pathname === '/')
+  const [systemLanguage, setSystemLanguage] = useState(defaultLanguage)
   const [theme, setTheme] = useState<Theme>(() => stored('kantan:theme', 'system'))
   const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
   const [text, setText] = useState(() => linkedSettings?.text ?? stored('kantan:source-text', ''))
@@ -426,7 +472,10 @@ function ManuscriptApp() {
   const [showServiceMark, setShowServiceMark] = useState(() => linkedSettings?.showServiceMark ?? true)
   const [pending, setPending] = useState<'pdf' | 'print' | null>(null)
   const previewRef = useRef<HTMLDivElement>(null)
-  const language = languagePreference === 'system' ? defaultLanguage() : languagePreference
+  const requestedLanguage = document.documentElement.dataset.initialLanguage
+  const language = languagePreference === 'system'
+    ? useInitialRequestLanguage && (requestedLanguage === 'ja' || requestedLanguage === 'en') ? requestedLanguage : systemLanguage
+    : languagePreference
   const labels: Labels = copy[language]
   const homeCopy = homepageCopy[language]
   const brandIcon = brandIconSource(theme, systemDark)
@@ -500,10 +549,13 @@ function ManuscriptApp() {
   }, [labels.printLinkInvalid, labels.printLinkTooLong])
 
   useEffect(() => {
-    persist('kantan:language-preference', languagePreference)
-    if (languagePreference !== 'system') persist('kantan:language', languagePreference)
+    if (shouldPersistLanguage.current) {
+      persist('kantan:language-preference', languagePreference)
+      if (languagePreference !== 'system') persist('kantan:language', languagePreference)
+    }
     document.documentElement.lang = language
     updateDocumentMetadata(homeCopy.title, homeCopy.description)
+    updateHomeLanguageMetadata(language)
   }, [homeCopy.description, homeCopy.title, language, languagePreference])
 
   useEffect(() => {
@@ -519,6 +571,15 @@ function ManuscriptApp() {
     const updateSystemTheme = () => setSystemDark(mediaQuery.matches)
     mediaQuery.addEventListener('change', updateSystemTheme)
     return () => mediaQuery.removeEventListener('change', updateSystemTheme)
+  }, [])
+
+  useEffect(() => {
+    const updateSystemLanguage = () => {
+      setUseInitialRequestLanguage(false)
+      setSystemLanguage(defaultLanguage())
+    }
+    window.addEventListener('languagechange', updateSystemLanguage)
+    return () => window.removeEventListener('languagechange', updateSystemLanguage)
   }, [])
 
   useEffect(() => {
@@ -576,9 +637,9 @@ function ManuscriptApp() {
 
   return <main className="app-shell">
     <header className="site-header">
-      <a className="brand" href="/" aria-label={`${labels.serviceName} ${labels.home}`}><img src={brandIcon} alt="" aria-hidden="true" /><span>{labels.serviceName}</span></a>
+      <a className="brand" href={`/${language}/`} aria-label={`${labels.serviceName} ${labels.home}`}><img src={brandIcon} alt="" aria-hidden="true" /><span>{labels.serviceName}</span></a>
       <div className="header-preferences">
-        <LanguageToggle value={languagePreference} onChange={setLanguagePreference} labels={labels} />
+        <LanguageToggle value={languagePreference} onChange={(value) => { shouldPersistLanguage.current = true; persist('kantan:language-manual', 'true'); setUseInitialRequestLanguage(false); setLanguagePreference(value) }} labels={labels} />
         <ThemeToggle value={theme} onChange={setTheme} labels={labels} />
       </div>
     </header>
