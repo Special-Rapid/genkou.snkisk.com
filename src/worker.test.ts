@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import worker, { renderDocumentationHtml, type Env } from './worker'
 
-const assetHtml = `<!doctype html><html><head><meta name="description" content="home"><link rel="canonical" href="https://genkou.snkisk.com/"><meta property="og:title" content="home"><meta property="og:description" content="home"><meta property="og:url" content="https://genkou.snkisk.com/"><meta name="twitter:title" content="home"><meta name="twitter:description" content="home"><title>home</title><script type="application/ld+json" id="website-structured-data">{"name":"原稿小箱"}</script></head><body><main id="seo-fallback" class="seo-fallback"><h1>root fallback</h1></main></body></html>`
+const assetHtml = `<!doctype html><html lang="ja"><head><meta name="description" content="home"><link rel="canonical" href="https://genkou.snkisk.com/"><meta property="og:title" content="home"><meta property="og:description" content="home"><meta property="og:url" content="https://genkou.snkisk.com/"><meta property="og:locale" content="ja_JP"><meta property="og:image:alt" content="home"><meta name="twitter:title" content="home"><meta name="twitter:description" content="home"><title>home</title><script type="application/ld+json" id="website-structured-data">{"name":"原稿小箱"}</script></head><body><main id="seo-fallback" class="seo-fallback"><h1>root fallback</h1></main></body></html>`
 
 const withAssets = (contentType = 'text/html; charset=utf-8') => {
   const requests: string[] = []
@@ -25,6 +25,51 @@ describe('WorkerのAI仕様と文書host', () => {
     expect(response.headers.get('link')).toContain('https://genkou.snkisk.com/llms.txt')
     expect(response.headers.get('link')).toContain('rel="alternate"')
     expect(response.headers.get('link')).toContain(encodeURIComponent('原稿小箱 AI印刷リンク仕様'))
+    expect(response.headers.get('vary')).toBe('Accept-Language')
+    const html = await response.text()
+    expect(html).toContain('<html lang="ja" data-initial-language="ja">')
+    expect(html).toContain('<link rel="canonical" href="https://genkou.snkisk.com/ja/" />')
+  })
+
+  it('言語別URLはブラウザの言語ヘッダーに影響されず、初期HTMLとcanonicalを揃える', async () => {
+    const { env, requests } = withAssets()
+    const japanese = await worker.fetch(new Request('https://genkou.snkisk.com/ja/', { headers: { 'accept-language': 'en-US,en;q=0.9' } }), env)
+    const english = await worker.fetch(new Request('https://genkou.snkisk.com/en/', { headers: { 'accept-language': 'ja-JP,ja;q=0.9' } }), env)
+    const jaHtml = await japanese.text()
+    const enHtml = await english.text()
+
+    expect(requests).toEqual(['/', '/'])
+    expect(jaHtml).toContain('<html lang="ja" data-initial-language="ja">')
+    expect(jaHtml).toContain('原稿小箱｜原稿用紙を作成して印刷・PDF保存')
+    expect(jaHtml).toContain('https://genkou.snkisk.com/ja/')
+    expect(enHtml).toContain('<html lang="en" data-initial-language="en">')
+    expect(enHtml).toContain('<title>原稿小箱 | Japanese manuscript paper, ready to print</title>')
+    expect(enHtml).toContain('Print Japanese manuscript paper, simply')
+    expect(enHtml).toContain('content="原稿小箱 — Create and print Japanese manuscript paper"')
+    expect(enHtml).toContain('"url":"https://genkou.snkisk.com/en/"')
+    expect(enHtml).toContain('https://genkou.snkisk.com/en/')
+    expect(enHtml).toContain('hreflang="ja"')
+    expect(enHtml).toContain('hreflang="en"')
+    expect(enHtml).not.toContain('root fallback')
+  })
+
+  it('rootは受け入れ言語の優先度を守り、英語ブラウザには英語HTMLを返す', async () => {
+    const { env } = withAssets()
+    const response = await worker.fetch(new Request('https://genkou.snkisk.com/', { headers: { 'accept-language': 'ja;q=0.7,en-US;q=0.9' } }), env)
+    const html = await response.text()
+
+    expect(html).toContain('<html lang="en" data-initial-language="en">')
+    expect(html).toContain('<title>原稿小箱 | Japanese manuscript paper, ready to print</title>')
+    expect(html).toContain('content="https://genkou.snkisk.com/en/"')
+  })
+
+  it('末尾スラッシュなしの言語別URLを正規のURLへ揃える', async () => {
+    const { env, requests } = withAssets()
+    const response = await worker.fetch(new Request('https://genkou.snkisk.com/ja?paper=b5'), env)
+
+    expect(response.status).toBe(308)
+    expect(response.headers.get('location')).toBe('https://genkou.snkisk.com/ja/?paper=b5')
+    expect(requests).toEqual([])
   })
 
   it('docs hostのHTMLに固有のSEO情報と静的本文を返す', async () => {

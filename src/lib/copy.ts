@@ -15,16 +15,20 @@ export const homepageCopy = {
   ja: {
     title: '原稿小箱｜原稿用紙を作成して印刷・PDF保存',
     description: '文章をB5・A4の原稿用紙に整えて、そのまま印刷・PDF保存。縦書き・横書きや文字数・行数を選んで仕上がりを確認できます。',
+    imageAlt: '原稿小箱 — 原稿用紙を作成して印刷・PDF保存',
     heading: '原稿用紙を、かんたんに印刷',
     introduction: '文章を整えて、原稿用紙の仕上がりを確認。印刷やPDF保存もこの画面からできます。',
     docsLink: 'AIで作った文章を印刷する方法',
+    javascriptRequired: '原稿用紙の作成・印刷にはJavaScriptを有効にしてください。',
   },
   en: {
     title: '原稿小箱 | Japanese manuscript paper, ready to print',
     description: 'Format text on Japanese manuscript paper in B5 or A4, preview vertical or horizontal writing, then print or save it as a PDF.',
+    imageAlt: '原稿小箱 — Create and print Japanese manuscript paper',
     heading: 'Print Japanese manuscript paper, simply',
     introduction: 'Format your text and preview the manuscript paper before printing or saving a PDF.',
     docsLink: 'Print text written with AI',
+    javascriptRequired: 'Enable JavaScript to create and print manuscript paper.',
   },
 } as const
 
