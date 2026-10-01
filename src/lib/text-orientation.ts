@@ -86,3 +86,27 @@ export function textareaDocument(document: ManuscriptDocument): ManuscriptDocume
   offsets[document.text.length] = normalized.length
   return { text: normalized, runs: normalizeRuns(normalized, document.runs.map(run => ({ ...run, start: offsets[run.start], end: offsets[run.end] }))) }
 }
+
+export type InputRange = { start: number; end: number; inputType?: string }
+/** The post-input caret anchors word/line deletions even when both sides repeat. */
+export function resolveInputRange(previous: string, text: string, before: InputRange | undefined, caret: number): InputRange | undefined {
+  if (!before || before.start !== before.end || !before.inputType?.startsWith('delete') || text.length >= previous.length) return before
+  const end = caret + previous.length - text.length
+  if (caret >= 0 && end <= previous.length && previous.slice(0, caret) + previous.slice(end) === text) return { start: caret, end }
+  return before
+}
+
+export type DocumentSaveState = 'saved' | 'text-only' | 'failed'
+export function persistDocument(storage: Pick<Storage, 'setItem' | 'removeItem'>, document: ManuscriptDocument): DocumentSaveState {
+  try {
+    storage.setItem('genkou:document', JSON.stringify({ version: 1, ...document }))
+  } catch {
+    // A stale combined entry must never shadow a newer plain-text fallback.
+    try { storage.removeItem('genkou:document') } catch { return 'failed' }
+    try { storage.setItem('kantan:source-text', document.text) } catch { return 'failed' }
+    return document.runs.length ? 'text-only' : 'saved'
+  }
+  // The complete document is authoritative; an optional legacy copy may fail safely.
+  try { storage.setItem('kantan:source-text', document.text) } catch { /* Complete save succeeded. */ }
+  return 'saved'
+}

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { editDocument, orientSelection, textareaDocument, type CharacterOrientation, type ManuscriptDocument } from './text-orientation'
+import { editDocument, orientSelection, textareaDocument, resolveInputRange, type InputRange, type CharacterOrientation, type ManuscriptDocument } from './text-orientation'
 
 type Selection = { start: number; end: number }
 type Snapshot = { document: ManuscriptDocument; selection: Selection }
@@ -8,7 +8,7 @@ export function useManuscriptDocument(initial: () => ManuscriptDocument) {
   const current = useRef(snapshot)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const past = useRef<Snapshot[]>([]), future = useRef<Snapshot[]>([])
-  const before = useRef<Selection | undefined>(undefined)
+  const before = useRef<InputRange | undefined>(undefined)
   const compositionStart = useRef<Snapshot | null>(null)
   const compositionTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const [composing, setComposing] = useState(false)
@@ -39,7 +39,7 @@ export function useManuscriptDocument(initial: () => ManuscriptDocument) {
       let start = input.selectionStart, end = input.selectionEnd
       if (start === end && event.inputType === 'deleteContentBackward' && start > 0) start -= Array.from(input.value.slice(0, start)).at(-1)?.length ?? 1
       if (start === end && event.inputType === 'deleteContentForward' && end < input.value.length) end += Array.from(input.value.slice(end))[0]?.length ?? 1
-      before.current = { start, end }
+      before.current = { start, end, inputType: event.inputType }
     }
     input.addEventListener('beforeinput', handleBeforeInput)
     return () => { input.removeEventListener('beforeinput', handleBeforeInput); clearTimeout(compositionTimer.current) }
@@ -64,7 +64,7 @@ export function useManuscriptDocument(initial: () => ManuscriptDocument) {
       onChange: () => {},
       onInput: (event: React.FormEvent<HTMLTextAreaElement>) => {
         const input = event.currentTarget
-        const editRange = before.current
+        const editRange = resolveInputRange(current.current.document.text, input.value, before.current, input.selectionStart)
         before.current = undefined
         if (input.value === current.current.document.text && (!editRange || editRange.start === editRange.end)) return
         const document = editDocument(current.current.document, input.value, editRange)

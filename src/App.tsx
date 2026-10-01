@@ -4,7 +4,7 @@ import { manuscriptCharacters, manuscriptDisplayCells, indexedManuscriptPages, p
 import { gridMetricsForFrame, type GridMetrics } from './lib/grid-metrics'
 import { createPrintLink, parsePrintLink, type PrintLinkPayload, type PrintLinkResult } from './lib/print-link'
 
-import { acceptsOrientation, orientationAt, readSavedDocument, type OrientationRun } from './lib/text-orientation'
+import { acceptsOrientation, orientationAt, readSavedDocument, persistDocument, type DocumentSaveState, type OrientationRun } from './lib/text-orientation'
 import { useManuscriptDocument } from './lib/use-manuscript-document'
 
 type Theme = 'system' | 'light' | 'dark'
@@ -467,6 +467,7 @@ function ManuscriptApp() {
   const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
   const editor = useManuscriptDocument(() => linkedSettings ? { text: linkedSettings.text, runs: linkedSettings.runs ?? [] } : readSavedDocument(stored('genkou:document', ''), stored('kantan:source-text', '')))
   const { text, runs } = editor.document
+  const [saveState, setSaveState] = useState<DocumentSaveState>('saved')
   const selectedText = text.slice(editor.selected.start, editor.selected.end)
   const canOrient = !editor.composing && Array.from(selectedText).some(acceptsOrientation)
   const selectedModes = new Set<string>()
@@ -601,8 +602,8 @@ function ManuscriptApp() {
   }, [systemDark, theme])
 
   useEffect(() => {
-    persist('genkou:document', JSON.stringify({ version: 1, text, runs }))
-    persist('kantan:source-text', text)
+    try { setSaveState(persistDocument(window.localStorage, { text, runs })) }
+    catch { setSaveState('failed') }
   }, [text, runs])
 
   useEffect(() => {
@@ -692,6 +693,9 @@ function ManuscriptApp() {
           </div>
           <p className="orientation-hint" role="status">{language === 'ja' ? (direction === 'horizontal' ? '文字の向きは縦書きで反映されます。' : selectedModes.size > 1 ? '選択範囲の向きは混在しています。' : '英字・数字を選択して向きを指定できます。') : (direction === 'horizontal' ? 'Orientation is applied in vertical writing.' : selectedModes.size > 1 ? 'The selection has mixed orientations.' : 'Select letters or numbers to set their orientation.')}</p>
           <button type="button" className="share-document" onClick={copyDocumentLink}>{language === 'ja' ? '本文と設定のリンクをコピー' : 'Copy text and settings link'}</button>
+          {saveState !== 'saved' && <p className="draft-save-error" role="alert">{language === 'ja'
+            ? saveState === 'text-only' ? '本文のみ保存されました。文字の向きは保存できていません。閉じる前に本文と設定のリンクを控えてください。' : '本文と文字の向きをブラウザに保存できません。閉じる前に内容を控えてください。'
+            : saveState === 'text-only' ? 'Only the text was saved. Character orientations could not be saved. Keep a text and settings link before closing.' : 'Text and orientations could not be saved in this browser. Keep a copy before closing.'}</p>}
           <p className="source-count" aria-live="polite">{labels.sourceCount} {sourceCharacters}{language === 'ja' ? labels.sourceSuffix : ` ${labels.sourceSuffix}`} / {totalPages} {labels.pages}</p>
         </div>
 

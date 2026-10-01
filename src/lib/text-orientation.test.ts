@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { textareaDocument, acceptsOrientation, editDocument, orientSelection, readSavedDocument, validateRuns } from './text-orientation'
+import { persistDocument, resolveInputRange, textareaDocument, acceptsOrientation, editDocument, orientSelection, readSavedDocument, validateRuns } from './text-orientation'
 import { indexedManuscriptPages, manuscriptDisplayCells } from './layout'
 import { createPrintLink, parsePrintLink } from './print-link'
 
@@ -59,4 +59,32 @@ describe('selected character orientation', () => {
     const doc = orientSelection({ text: 'Ab', runs: [] }, 0, 2, 'upright')
     expect(readSavedDocument(JSON.stringify({ version: 1, ...doc }), '')).toEqual(doc)
   })
+  it('anchors repeated-text word and line deletions to the resulting caret', () => {
+    const original = orientSelection(orientSelection({ text: 'AAAA', runs: [] }, 0, 2, 'upright'), 2, 4, 'sideways')
+    for (const inputType of ['deleteWordBackward', 'deleteSoftLineBackward', 'deleteHardLineBackward']) {
+      const range = resolveInputRange(original.text, 'AA', { start: 2, end: 2, inputType }, 0)
+      expect(editDocument(original, 'AA', range).runs).toEqual([{ start: 0, end: 2, mode: 'sideways' }])
+    }
+    const forward = resolveInputRange(original.text, 'AA', { start: 2, end: 2, inputType: 'deleteWordForward' }, 2)
+    expect(editDocument(original, 'AA', forward).runs).toEqual([{ start: 0, end: 2, mode: 'upright' }])
+  })
+  it('invalidates stale combined storage before falling back to the latest text', () => {
+    const values = new Map([['genkou:document', JSON.stringify({ version: 1, text: 'old', runs: [] })]])
+    const storage = { setItem: (key: string, value: string) => { if (key === 'genkou:document') throw new Error('quota'); values.set(key, value) }, removeItem: (key: string) => { values.delete(key) } }
+    const document = orientSelection({ text: 'new', runs: [] }, 0, 3, 'upright')
+    expect(persistDocument(storage, document)).toBe('text-only')
+    expect(values.has('genkou:document')).toBe(false)
+    expect(readSavedDocument(values.get('genkou:document') ?? null, values.get('kantan:source-text') ?? '').text).toBe('new')
+  })
+  it('keeps a complete save authoritative when the legacy copy fails', () => {
+    const values = new Map<string, string>()
+    const storage = { setItem: (key: string, value: string) => { if (key === 'kantan:source-text') throw new Error('quota'); values.set(key, value) }, removeItem: (key: string) => { values.delete(key) } }
+    const document = orientSelection({ text: 'new', runs: [] }, 0, 3, 'upright')
+    expect(persistDocument(storage, document)).toBe('saved')
+    expect(readSavedDocument(values.get('genkou:document') ?? null, 'old')).toEqual(document)
+  })
+  it('reports unavailable storage instead of claiming a save', () => {
+    expect(persistDocument({ setItem: () => { throw new Error('blocked') }, removeItem: () => { throw new Error('blocked') } }, { text: 'new', runs: [] })).toBe('failed')
+  })
+
 })
