@@ -1,8 +1,10 @@
+import { validateRuns, type OrientationRun } from './text-orientation'
 export const printLinkVersion = '1'
 export const maximumPrintLinkCharacters = 20_000
 
 export type PrintLinkPayload = {
   text: string
+  runs?: OrientationRun[]
   direction?: 'vertical' | 'horizontal'
   paper?: 'b5' | 'a4'
   orientation?: 'portrait' | 'landscape'
@@ -54,10 +56,19 @@ export function parsePrintLink(hash: string): PrintLinkResult {
 
   const params = new URLSearchParams(fragment)
   if (!params.has('v')) return { kind: 'absent' }
-  if (params.get('v') !== printLinkVersion || !params.has('text')) return { kind: 'invalid' }
+  if (!['1', '2'].includes(params.get('v') ?? '') || !params.has('text')) return { kind: 'invalid' }
 
   const text = params.get('text') ?? ''
   if (Array.from(text).length > maximumPrintLinkCharacters) return { kind: 'too-long' }
+
+  let runs: OrientationRun[] | undefined
+  if (params.get('v') === '2') {
+    try {
+      const value: unknown = JSON.parse(params.get('runs') ?? '[]')
+      if (!validateRuns(text, value)) return { kind: 'invalid' }
+      runs = value
+    } catch { return { kind: 'invalid' } }
+  }
 
   const direction = valueOrInvalid(params, 'direction', directions)
   const paper = valueOrInvalid(params, 'paper', papers)
@@ -80,6 +91,7 @@ export function parsePrintLink(hash: string): PrintLinkResult {
 
   return { kind: 'valid', payload: {
     text,
+    ...(runs ? { runs } : {}),
     direction: direction ?? undefined,
     paper: paper ?? undefined,
     orientation: orientation ?? undefined,
@@ -92,4 +104,17 @@ export function parsePrintLink(hash: string): PrintLinkResult {
     autoParagraphIndent: autoParagraphIndent ?? undefined,
     showServiceMark: showServiceMark ?? undefined,
   } }
+}
+
+/** Fragment-only serialization: body and formatting are not sent in HTTP requests. */
+export function createPrintLink(payload: PrintLinkPayload): string {
+  const params = new URLSearchParams({ v: payload.runs?.length ? '2' : '1', text: payload.text })
+  for (const [key, value] of Object.entries(payload)) {
+    if (key === 'text' || value === undefined) continue
+    if (key === 'runs') { if (payload.runs?.length) params.set(key, JSON.stringify(value)); continue }
+    params.set(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value))
+  }
+  const hash = '#' + params.toString()
+  if (parsePrintLink(hash).kind !== 'valid') throw new Error('Invalid print link')
+  return hash
 }

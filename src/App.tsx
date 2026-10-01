@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { copy, documentationCopy, homepageCopy, rootPromptCopy, type Labels, type Language } from './lib/copy'
-import { manuscriptCharacters, manuscriptDisplayCells, manuscriptPages, pageTotal, type Direction, type ManuscriptCell } from './lib/layout'
+import { manuscriptCharacters, manuscriptDisplayCells, indexedManuscriptPages, pageTotal, type Direction, type IndexedCell } from './lib/layout'
 import { gridMetricsForFrame, type GridMetrics } from './lib/grid-metrics'
-import { parsePrintLink, type PrintLinkPayload, type PrintLinkResult } from './lib/print-link'
+import { createPrintLink, parsePrintLink, type PrintLinkPayload, type PrintLinkResult } from './lib/print-link'
+
+import { acceptsOrientation, orientationAt, readSavedDocument, persistDocument, type DocumentSaveState, type OrientationRun } from './lib/text-orientation'
+import { useManuscriptDocument } from './lib/use-manuscript-document'
 
 type Theme = 'system' | 'light' | 'dark'
 type PaperId = 'b5' | 'a4'
@@ -306,7 +309,11 @@ function ThemeToggle({ value, onChange, labels }: { value: Theme; onChange: (the
   </div>
 }
 
-function ManuscriptPage({ direction, paper, paperOrientation, composition, cells, page, total, fontFamily, fontSize, margin, marginPercentage, gridColor, showServiceMark, printGridMetrics, labels, language }: { direction: Direction; paper: PaperId; paperOrientation: PaperOrientation; composition: CompositionId; cells: ManuscriptCell[]; page: number; total: number; fontFamily: string; fontSize: string; margin: Margin; marginPercentage: number; gridColor: string; showServiceMark: boolean; printGridMetrics: GridMetrics; labels: Labels; language: Language }) {
+function ManuscriptPage({ runs, direction, paper, paperOrientation, composition, cells, page, total, fontFamily, fontSize, margin, marginPercentage, gridColor, showServiceMark, printGridMetrics, labels, language }: { direction: Direction; paper: PaperId; paperOrientation: PaperOrientation; composition: CompositionId; runs: OrientationRun[]; cells: IndexedCell[]; page: number; total: number; fontFamily: string; fontSize: string; margin: Margin; marginPercentage: number; gridColor: string; showServiceMark: boolean; printGridMetrics: GridMetrics; labels: Labels; language: Language }) {
+  const renderCell = (cell: IndexedCell, index: number) => {
+    const mode = cell && direction === 'vertical' ? orientationAt(runs, cell.sourceStart) : undefined
+    return <span key={index} className="manuscript-cell" data-source-start={cell?.sourceStart} data-character-orientation={mode}>{mode ? <span className={`oriented-character ${mode}`}>{cell?.character}</span> : cell?.character}</span>
+  }
   const layout = compositions[composition]
   const hasText = cells.some((cell) => cell !== null)
   const paperName = papers[paper][language]
@@ -339,21 +346,21 @@ function ManuscriptPage({ direction, paper, paperOrientation, composition, cells
     <div className={`paper page-${paper} orientation-${paperOrientation} direction-${direction} family-${fontFamily} font-${fontSize} margin-${margin} ${canShowServiceMark ? 'has-service-mark' : ''}`} style={{ '--columns': columns, '--rows': rows, '--paper-line': gridColor, '--paper-width': paperDimensions.width, '--paper-height': paperDimensions.height, '--paper-block-margin': `${paperBlockMargin}%`, '--print-paper-block-margin': `${printPaperBlockMargin}%`, '--paper-inline-margin': `${paperInlineMargin}%`, '--print-paper-inline-margin': `${printPaperInlineMargin}%`, '--screen-service-mark-bottom': `${paperInlineMargin}%`, '--print-service-mark-bottom': `${printServiceMarkBottom}%`, '--print-cell-size': `${printGridMetrics.cellSize}mm`, '--print-line-band-size': `${printGridMetrics.lineBandSize}mm`, '--print-cross-band-size': `${printGridMetrics.crossBandSize}mm`, '--print-spine-band-size': `${printGridMetrics.spineBandSize}mm`, ...gridMetrics.style } as React.CSSProperties}>
       <div className="manuscript-grid-frame" ref={gridMetrics.frameRef}>
         {verticalSpread
-          ? <div className="manuscript-grid vertical-manuscript-grid" aria-label={hasText ? `${labels.sourceCount} ${manuscriptCharacters(cells.join('')).length}${labels.sourceSuffix}` : labels.blank}>
-            <div className="manuscript-half" style={{ '--half-columns': leftColumns, '--rows': rows } as React.CSSProperties}>{leftCells.map((cell, index) => <span key={index} className="manuscript-cell">{cell}</span>)}</div>
+          ? <div className="manuscript-grid vertical-manuscript-grid" aria-label={hasText ? `${labels.sourceCount} ${cells.filter(Boolean).length}${labels.sourceSuffix}` : labels.blank}>
+            <div className="manuscript-half" style={{ '--half-columns': leftColumns, '--rows': rows } as React.CSSProperties}>{leftCells.map(renderCell)}</div>
             <div className="manuscript-spine" aria-hidden="true">
               <svg className="fish-tail" viewBox="0 0 20 10" focusable="false"><path d="M1 1h18v7C14.5 4.8 5.5 4.8 1 8Z" /></svg>
               <span className="spine-guide" />
             </div>
-            <div className="manuscript-half" style={{ '--half-columns': layout.lines - leftColumns, '--rows': rows } as React.CSSProperties}>{rightCells.map((cell, index) => <span key={index} className="manuscript-cell">{cell}</span>)}</div>
+            <div className="manuscript-half" style={{ '--half-columns': layout.lines - leftColumns, '--rows': rows } as React.CSSProperties}>{rightCells.map(renderCell)}</div>
             </div>
           : horizontalSpread
-            ? <div className="manuscript-grid horizontal-manuscript-grid" aria-label={hasText ? `${labels.sourceCount} ${manuscriptCharacters(cells.join('')).length}${labels.sourceSuffix}` : labels.blank}>
-              <div className="manuscript-half horizontal-manuscript-half" style={{ '--columns': layout.characters, '--half-rows': topRows } as React.CSSProperties}>{topCells.map((cell, index) => <span key={index} className="manuscript-cell">{cell}</span>)}</div>
+            ? <div className="manuscript-grid horizontal-manuscript-grid" aria-label={hasText ? `${labels.sourceCount} ${cells.filter(Boolean).length}${labels.sourceSuffix}` : labels.blank}>
+              <div className="manuscript-half horizontal-manuscript-half" style={{ '--columns': layout.characters, '--half-rows': topRows } as React.CSSProperties}>{topCells.map(renderCell)}</div>
               <div className="manuscript-spine horizontal-manuscript-spine" aria-hidden="true" />
-              <div className="manuscript-half horizontal-manuscript-half" style={{ '--columns': layout.characters, '--half-rows': layout.lines - topRows } as React.CSSProperties}>{bottomCells.map((cell, index) => <span key={index} className="manuscript-cell">{cell}</span>)}</div>
+              <div className="manuscript-half horizontal-manuscript-half" style={{ '--columns': layout.characters, '--half-rows': layout.lines - topRows } as React.CSSProperties}>{bottomCells.map(renderCell)}</div>
               </div>
-            : <div className="manuscript-grid" aria-label={hasText ? `${labels.sourceCount} ${manuscriptCharacters(cells.join('')).length}${labels.sourceSuffix}` : labels.blank}>{displayCells.map((cell, index) => <span key={index} className="manuscript-cell">{cell}</span>)}</div>}
+            : <div className="manuscript-grid" aria-label={hasText ? `${labels.sourceCount} ${cells.filter(Boolean).length}${labels.sourceSuffix}` : labels.blank}>{displayCells.map(renderCell)}</div>}
       </div>
       {!hasText && <p className="empty-paper">{labels.blank}</p>}
       {canShowServiceMark && <span className="service-mark" aria-hidden="true">{labels.serviceName}</span>}
@@ -458,7 +465,14 @@ function ManuscriptApp() {
   const [systemLanguage, setSystemLanguage] = useState(defaultLanguage)
   const [theme, setTheme] = useState<Theme>(() => stored('kantan:theme', 'system'))
   const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
-  const [text, setText] = useState(() => linkedSettings?.text ?? stored('kantan:source-text', ''))
+  const editor = useManuscriptDocument(() => linkedSettings ? { text: linkedSettings.text, runs: linkedSettings.runs ?? [] } : readSavedDocument(stored('genkou:document', ''), stored('kantan:source-text', '')))
+  const { text, runs } = editor.document
+  const [saveState, setSaveState] = useState<DocumentSaveState>('saved')
+  const selectedText = text.slice(editor.selected.start, editor.selected.end)
+  const canOrient = !editor.composing && Array.from(selectedText).some(acceptsOrientation)
+  const selectedModes = new Set<string>()
+  let selectedOffset = editor.selected.start
+  for (const character of selectedText) { if (acceptsOrientation(character)) selectedModes.add(orientationAt(runs, selectedOffset) ?? 'default'); selectedOffset += character.length }
   const [direction, setDirection] = useState<Direction>(() => linkedSettings?.direction ?? 'vertical')
   const [paper, setPaper] = useState<PaperId>(() => linkedSettings?.paper ?? 'b5')
   const [paperOrientation, setPaperOrientation] = useState<PaperOrientation>(() => linkedSettings?.orientation ?? ((linkedSettings?.direction ?? 'vertical') === 'vertical' ? 'landscape' : 'portrait'))
@@ -513,7 +527,7 @@ function ManuscriptApp() {
     && printGridMetrics !== undefined
     && !printMarginUnavailable
   const totalPages = useMemo(() => pageTotal(text, compositions[composition], layoutOptions), [text, composition, layoutOptions])
-  const pages = useMemo(() => manuscriptPages(text, compositions[composition], layoutOptions), [text, composition, layoutOptions])
+  const pages = useMemo(() => indexedManuscriptPages(text, compositions[composition], layoutOptions), [text, composition, layoutOptions])
 
   const selectDirection = (nextDirection: Direction) => {
     setDirection(nextDirection)
@@ -533,7 +547,7 @@ function ManuscriptApp() {
 
     const next: PrintLinkPayload = result.payload
     const nextDirection = next.direction ?? 'vertical'
-    setText(next.text)
+    editor.replace({ text: next.text, runs: next.runs ?? [] })
     setDirection(nextDirection)
     setPaper(next.paper ?? 'b5')
     setPaperOrientation(next.orientation ?? (nextDirection === 'vertical' ? 'landscape' : 'portrait'))
@@ -588,8 +602,9 @@ function ManuscriptApp() {
   }, [systemDark, theme])
 
   useEffect(() => {
-    persist('kantan:source-text', text)
-  }, [text])
+    try { setSaveState(persistDocument(window.localStorage, { text, runs })) }
+    catch { setSaveState('failed') }
+  }, [text, runs])
 
   useEffect(() => {
     const handleHashChange = () => applyPrintLink(parsePrintLink(window.location.hash))
@@ -625,6 +640,22 @@ function ManuscriptApp() {
     }
   }
 
+  const copyDocumentLink = async () => {
+    try {
+      const hash = createPrintLink({
+        text, runs, direction, paper, orientation: paperOrientation, composition,
+        fontFamily: fontFamily as 'mincho' | 'gothic',
+        fontSize: fontSize as 'small' | 'normal' | 'large', margin,
+        ...(margin === 'custom' ? { customMarginPercentage } : {}),
+        gridColor, autoParagraphIndent, showServiceMark,
+      })
+      await navigator.clipboard.writeText(new URL(hash, window.location.href).href)
+      setStatus({ tone: 'success', message: language === 'ja' ? '本文と設定のリンクをコピーしました。' : 'Copied a link with text and settings.' })
+    } catch {
+      setStatus({ tone: 'error', message: language === 'ja' ? 'リンクをコピーできませんでした。本文の長さやクリップボードの権限を確認してください。' : 'Could not copy the link. Check text length and clipboard permissions.' })
+    }
+  }
+
   const print = () => {
     if (pending || !layoutSupported) return
     setPending('print')
@@ -656,7 +687,15 @@ function ManuscriptApp() {
       <section className="editor" aria-label={labels.body}>
         <div className="field-group text-field">
           <label htmlFor="source-text">{labels.body}</label>
-          <textarea id="source-text" value={text} onChange={(event) => setText(event.target.value)} placeholder={labels.hint} spellCheck="false" />
+          <textarea ref={editor.textarea} id="source-text" value={text} {...editor.inputProps} placeholder={labels.hint} spellCheck="false" />
+          <div className="character-orientation-controls" role="group" aria-label={language === 'ja' ? '選択した英数字の向き' : 'Selected letters and numbers'}>
+            {(['default', 'upright', 'sideways'] as const).map(mode => <button key={mode} type="button" disabled={!canOrient} aria-pressed={selectedModes.size === 1 && selectedModes.has(mode)} onClick={() => editor.orient(mode === 'default' ? undefined : mode)}>{language === 'ja' ? ({ default: '標準', upright: '正立', sideways: '横倒し' })[mode] : ({ default: 'Default', upright: 'Upright', sideways: 'Sideways' })[mode]}</button>)}
+          </div>
+          <p className="orientation-hint" role="status">{language === 'ja' ? (direction === 'horizontal' ? '文字の向きは縦書きで反映されます。' : selectedModes.size > 1 ? '選択範囲の向きは混在しています。' : '英字・数字を選択して向きを指定できます。') : (direction === 'horizontal' ? 'Orientation is applied in vertical writing.' : selectedModes.size > 1 ? 'The selection has mixed orientations.' : 'Select letters or numbers to set their orientation.')}</p>
+          <button type="button" className="share-document" onClick={copyDocumentLink}>{language === 'ja' ? '本文と設定のリンクをコピー' : 'Copy text and settings link'}</button>
+          {saveState !== 'saved' && <p className="draft-save-error" role="alert">{language === 'ja'
+            ? saveState === 'text-only' ? '本文のみ保存されました。文字の向きは保存できていません。閉じる前に本文と設定のリンクを控えてください。' : '本文と文字の向きをブラウザに保存できません。閉じる前に内容を控えてください。'
+            : saveState === 'text-only' ? 'Only the text was saved. Character orientations could not be saved. Keep a text and settings link before closing.' : 'Text and orientations could not be saved in this browser. Keep a copy before closing.'}</p>}
           <p className="source-count" aria-live="polite">{labels.sourceCount} {sourceCharacters}{language === 'ja' ? labels.sourceSuffix : ` ${labels.sourceSuffix}`} / {totalPages} {labels.pages}</p>
         </div>
 
@@ -687,7 +726,7 @@ function ManuscriptApp() {
       <section className="preview-panel" aria-label={labels.preview}>
         <div className="preview-heading"><h2>{labels.preview}</h2><InfoButton label={labels.info} content={labels.settingsInfo} /></div>
         <div className="preview-capture" ref={previewRef}>{layoutSupported
-          ? pages.map((cells, index) => <ManuscriptPage key={index} direction={direction} paper={paper} paperOrientation={paperOrientation} composition={composition} cells={cells} page={index + 1} total={pages.length} fontFamily={fontFamily} fontSize={fontSize} margin={margin} marginPercentage={marginPercentage} gridColor={gridColor} showServiceMark={showServiceMark} printGridMetrics={printGridMetrics!} labels={labels} language={language} />)
+          ? pages.map((cells, index) => <ManuscriptPage runs={runs} key={index} direction={direction} paper={paper} paperOrientation={paperOrientation} composition={composition} cells={cells} page={index + 1} total={pages.length} fontFamily={fontFamily} fontSize={fontSize} margin={margin} marginPercentage={marginPercentage} gridColor={gridColor} showServiceMark={showServiceMark} printGridMetrics={printGridMetrics!} labels={labels} language={language} />)
           : <p id="layout-unavailable" className="layout-unavailable" role="status">{printMarginUnavailable ? labels.printMarginUnavailable : labels.layoutUnavailable}</p>}</div>
       </section>
     </div>

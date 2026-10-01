@@ -53,3 +53,11 @@ After composing a short text, present the finished link as a clickable Markdown 
 ## Example link
 
 `https://genkou.snkisk.com/#v=1&text=%E4%BD%9C%E6%96%87%E3%81%A7%E3%81%99%E3%80%82&direction=vertical&paper=b5&orientation=landscape&composition=20x20`
+
+## Selected Latin letters and numbers (v2)
+
+Existing v1 links remain valid. To preserve per-character orientation overrides, use `v=2` with `runs` as URL-encoded JSON: `[{"start":0,"end":3,"mode":"upright"},{"start":3,"end":6,"mode":"sideways"}]` for text `ABC123`. The editor's “Copy text and settings link” button generates the complete fragment.
+
+Offsets are zero-based UTF-16 half-open ranges in the decoded original text (emoji may occupy two code units). Runs must be sorted, non-overlapping, within the text, and contain only Latin-script characters or decimal digits; at most 20,000 runs. Only `upright` and `sideways` are valid. Missing runs means default orientation. Japanese characters, whitespace, punctuation and newlines cannot receive overrides. On loading, CRLF/CR are normalized to textarea LF with ranges rebased. One character still occupies one manuscript cell; this is not whole-word horizontal typesetting.
+
+Overrides affect vertical writing only and are retained in horizontal mode. Newly inserted characters use default orientation. Text and overrides are saved together locally and restored together with Undo/Redo. The text and formatting stay after `#`, so they are not sent in HTTP requests. Anyone given a copied link can read its text; copy/share only when the user asks. The text length limit and all existing paper settings also apply to v2.
