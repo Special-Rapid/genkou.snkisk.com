@@ -144,3 +144,13 @@ textarea { min-height: 348px; padding: var(--space-3); line-height: 1.75; resize
 .paper-wrap.page-b5.orientation-landscape { page: b5-landscape; }
 .paper-wrap.page-a4.orientation-portrait { page: a4-portrait; }
 .paper-wrap.page-a4.orientation-landscape { page: a4-landscape; }
+
+.character-orientation-controls { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.character-orientation-controls button, .share-document { min-height: 40px; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.character-orientation-controls button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.character-orientation-controls button:disabled { opacity: .5; cursor: default; }
+.orientation-hint { margin: 0; font-size: 13px; color: var(--muted); }
+.direction-vertical .manuscript-cell:has(.oriented-character) { writing-mode: horizontal-tb; }
+.oriented-character { display: inline-block; writing-mode: horizontal-tb; }
+.oriented-character.sideways { transform: rotate(90deg); }
+@media print { .oriented-character.sideways { transform: rotate(90deg); } }

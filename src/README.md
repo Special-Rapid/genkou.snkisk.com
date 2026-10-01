@@ -7,3 +7,15 @@
 検索用ホームは `/ja/` と `/en/` に分け、初期HTMLの本文・title・description・canonical・OG情報をそれぞれの言語へ揃えます。`/` は本文入り印刷リンクとの互換性を保つ入口で、リクエストの `Accept-Language` から日本語または英語を選び、ヘッダーがない場合は日本語を使います。Workerが選んだ言語をクライアントの初期表示にも使い、検索クローラーによる英語への書き換えを避けます。言語別URLを直接開いた場合は、そのURLの言語を初期選択し、保存済みの手動選択は引き続き優先します。URLからの初期選択だけでは手動設定として保存しません。使い方ページからホームへ戻るリンクは現在の表示言語のURLへ向けます。言語切替は再読み込みせず本文とメタ情報を同時に更新します。対応する経緯と確認条件は [Issue #1](https://github.com/Special-Rapid/kantan.snkisk.com/issues/1) にあります。
 
 テーマは System / Light / Dark に対応し、`kantan:theme` に保存します。SystemではOSの外観変更に追従し、選択結果を `data-theme`、CSSの `color-scheme`、ブラウザの `theme-color` に反映します。ブラウザの動的アクセント色を取得する公開APIは利用していないため、配色はCSSの意味別変数で管理します。言語・テーマの切替は再読み込みせず、入力や現在の画面を維持します。
+
+## 選択した英数字の向き（Issue #16）
+
+本文のLatin文字・十進数字を選択し「標準／正立／横倒し」で1文字1マスの向きを指定します。日本語・空白・句読点・改行は対象外です。選択なし・対象なし・IME変換中は操作できません。横書きではデータを保持し表示だけ適用を止めます。
+
+`text-orientation.ts`はUTF-16半開区間の非重複runsを管理します。textareaへ渡す前にCRLF/CRをLFへ統一してrunsを移動し、indexed layoutが元本文offsetを段落整形／改ページ後にも保持します。新しい文字は標準で、範囲内挿入は既存runを分割します。既存の自動段落字下げ・空白整形仕様は変更していません（空白の報告はIssue #15）。
+
+本文とrunsを同じ履歴へ保存し、Ctrl/Cmd+Z、Ctrl+Y／Cmd+Shift+Z、beforeinput historyUndo/Redoで復元します。履歴上限は100操作で、IMEの一回の確定は一操作です。通常の各入力・削除・書式変更は一操作として扱います。保存はversion付き`genkou:document`、旧`kantan:source-text`から移行し、本文のみの互換保存も続けます。
+
+印刷リンクはv1を継続読取り、指定を含むリンクのみv2＋JSON runsを使用します。仕様はpublic/llms.txt。「本文と設定のリンクをコピー」は本文を含むため、共有先に本文が見えることを前提に利用します。URL自体はfragmentだけへ本文を格納します。入力上限・形式検証に失敗した場合やclipboard失敗時には成功通知を出しません。
+
+文字の向きはglyph内spanのhorizontal writing-modeと90度transformで描画し、プレビュー・印刷とhtml2canvas経由PDFを揃えます。CSS text-orientationだけへの依存は避けています。
