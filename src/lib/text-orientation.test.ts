@@ -24,6 +24,10 @@ describe('selected character orientation', () => {
     expect(editDocument(initial, '').runs).toEqual([])
     expect(editDocument(initial, 'A\n😀A', { start: 1, end: 2 }).runs).toEqual([{ start: 0, end: 1, mode: 'upright' }, { start: 4, end: 5, mode: 'upright' }])
   })
+  it('clears formatting on identical replacement text and preserves unselected characters', () => {
+    const initial = orientSelection({ text: 'ABA', runs: [] }, 0, 3, 'upright')
+    expect(editDocument(initial, 'ABA', { start: 0, end: 1 }).runs).toEqual([{ start: 1, end: 3, mode: 'upright' }])
+  })
   it('keeps original offsets across CRLF, paragraph indentation, pagination and display order', () => {
     const text = '  A\r\n\r\n　😀B\nC'
     for (const autoParagraphIndent of [true, false]) {

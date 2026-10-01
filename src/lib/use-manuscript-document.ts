@@ -60,12 +60,18 @@ export function useManuscriptDocument(initial: () => ManuscriptDocument) {
     },
     inputProps: {
       onSelect: recordSelection,
-      onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => {
-        if (event.target.value === current.current.document.text) return
-        const document = editDocument(current.current.document, event.target.value, before.current)
+      // React onChange coalesces identical values; native input still identifies a replacement.
+      onChange: () => {},
+      onInput: (event: React.FormEvent<HTMLTextAreaElement>) => {
+        const input = event.currentTarget
+        const editRange = before.current
         before.current = undefined
-        if (!compositionStart.current) remember({ ...current.current, selection: selection.current })
-        publish({ document, selection: { start: event.target.selectionStart, end: event.target.selectionEnd } })
+        if (input.value === current.current.document.text && (!editRange || editRange.start === editRange.end)) return
+        const document = editDocument(current.current.document, input.value, editRange)
+        if (!compositionStart.current && (document.text !== current.current.document.text || JSON.stringify(document.runs) !== JSON.stringify(current.current.document.runs))) {
+          remember({ ...current.current, selection: editRange ?? selection.current })
+        }
+        publish({ document, selection: { start: input.selectionStart, end: input.selectionEnd } })
       },
       onCompositionStart: () => { compositionStart.current = { ...current.current, selection: selection.current }; setComposing(true) },
       onCompositionEnd: () => {
