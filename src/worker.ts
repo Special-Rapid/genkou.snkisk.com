@@ -59,7 +59,7 @@ export function renderDocumentationHtml(html: string): string {
   })
   result = result.replace(/<script\b(?=[^>]*\bid=(['"])website-structured-data\1)[^>]*>[\s\S]*?<\/script>/i, `<script type="application/ld+json" id="website-structured-data">${structuredData}</script>`)
 
-  const fallback = `<main id="seo-fallback" class="seo-fallback"><p>原稿小箱の使い方</p><h1>AIの文章を、原稿小箱で原稿用紙に</h1><p>題材を伝えて文章と本文入りリンクをAIに依頼できます。リンクを開き、内容を確認してから印刷またはPDF保存してください。</p><p>本文と設定はURLの # より後ろに含まれます。この部分はサイトへ送信されませんが、リンクを受け取った人には本文が読めるため、秘密の文章や個人情報を含む内容は共有しないでください。</p><p><a href="${homeUrl}">原稿小箱を開く</a></p><p><a href="${homeUrl}llms.txt">AI向け印刷リンク仕様</a></p></main>`
+  const fallback = `<main id="seo-fallback" class="seo-fallback"><p>原稿小箱の使い方</p><h1>AIの文章を、原稿小箱で原稿用紙に</h1><p>題材を伝えて文章と本文入りリンクをAIに依頼できます。リンクを開き、内容を確認してから印刷またはPDF保存してください。</p><p>本文と設定はURLの # より後ろに含まれます。この部分はサイトへ送信されませんが、リンクを受け取った人には本文が読めるため、秘密の文章や個人情報を含む内容は共有しないでください。</p><p><a href="${homeUrl}">原稿小箱を開く</a></p><h2>本文入りリンクの作り方</h2><p>本文を encodeURIComponent でURLエンコードし、<code>https://genkou.snkisk.com/#v=1&amp;text=本文</code> の text に指定します。設定を省略すると標準の原稿用紙になります。本文の上限は20,000 Unicode文字です。</p><p><a href="${homeUrl}#v=1&amp;text=%E4%BD%9C%E6%96%87%E3%81%A7%E3%81%99%E3%80%82">「作文です。」を開くサンプル</a></p><p><a href="${homeUrl}llms.txt">AI向け印刷リンク仕様と全設定</a></p></main>`
   return result.replace(/<main\b(?=[^>]*\bid=(['"])seo-fallback\1)[^>]*>[\s\S]*?<\/main>/i, fallback)
 }
 
@@ -80,7 +80,7 @@ export function renderHomeHtml(html: string, language: Language): string {
   result = result.replace('</head>', `<link rel="alternate" hreflang="ja" href="${localizedHomeUrl('ja')}" /><link rel="alternate" hreflang="en" href="${localizedHomeUrl('en')}" /><link rel="alternate" hreflang="x-default" href="${homeUrl}" /></head>`)
   result = result.replace(/<script\b(?=[^>]*\bid=(['"])website-structured-data\1)[^>]*>[\s\S]*?<\/script>/i, `<script type="application/ld+json" id="website-structured-data">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: '原稿小箱', alternateName: 'genkou.snkisk.com', url: pageUrl })}</script>`)
   if (language === 'en') {
-    result = result.replace(/<main\b(?=[^>]*\bid=(['"])seo-fallback\1)[^>]*>[\s\S]*?<\/main>/i, `<main id="seo-fallback" class="seo-fallback"><h1>${content.heading}</h1><p>${content.introduction}</p><p><a href="${docsUrl}">${content.docsLink}</a></p><noscript>${content.javascriptRequired}</noscript></main>`)
+    result = result.replace(/<main\b(?=[^>]*\bid=(['"])seo-fallback\1)[^>]*>[\s\S]*?<\/main>/i, `<main id="seo-fallback" class="seo-fallback"><h1>${content.heading}</h1><p>${content.introduction}</p><p><a href="${docsUrl}">${content.docsLink}</a></p><p><a href="${homeUrl}llms.txt">AI print-link specification</a></p><noscript>${content.javascriptRequired}</noscript></main>`)
   }
   return result
 }
@@ -111,7 +111,7 @@ export default {
     const homeLanguage: Language = url.pathname === '/ja/' ? 'ja' : url.pathname === '/en/' ? 'en' : preferredLanguage(request.headers.get('accept-language'))
 
     let assetPath = url.pathname
-    if (isDocumentationHost && (url.pathname === '/' || url.pathname === '/index.html')) assetPath = '/docs'
+    if (isDocsPage) assetPath = '/'
     else if (isDocumentationHost && url.pathname === '/robots.txt') assetPath = '/docs-robots.txt'
     else if (isDocumentationHost && url.pathname === '/sitemap.xml') assetPath = '/docs-sitemap.xml'
     else if (isRootPage && url.pathname !== '/') assetPath = '/'

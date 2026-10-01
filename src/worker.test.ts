@@ -77,7 +77,7 @@ describe('WorkerのAI仕様と文書host', () => {
     const response = await worker.fetch(new Request('https://docs.genkou.snkisk.com/'), env)
     const html = await response.text()
 
-    expect(requests).toEqual(['/docs'])
+    expect(requests).toEqual(['/'])
     expect(response.headers.get('link')).toBeNull()
     expect(response.headers.get('content-type')).toContain('text/html')
     expect(html).toContain('<title>原稿小箱の使い方｜AIで文章と印刷リンクを作る</title>')
@@ -108,7 +108,7 @@ describe('WorkerのAI仕様と文書host', () => {
     const response = await worker.fetch(new Request('https://genkou.snkisk.com/docs'), env)
     const html = await response.text()
 
-    expect(requests).toEqual(['/docs'])
+    expect(requests).toEqual(['/'])
     expect(html).toContain('https://docs.genkou.snkisk.com/')
   })
 
@@ -135,5 +135,25 @@ describe('WorkerのAI仕様と文書host', () => {
     const html = renderDocumentationHtml(assetHtml)
     expect(html).toContain('<link rel="canonical" href="https://docs.genkou.snkisk.com/" />')
     expect(html).toContain('<main id="seo-fallback" class="seo-fallback">')
+  })
+
+  it('docsと翻訳ページはSPA fallbackに頼らず実在するroot資産を読む', async () => {
+    const env: Env = { ASSETS: { fetch: async (request) =>
+      new URL(request.url).pathname === '/'
+        ? new Response(assetHtml, { headers: { 'content-type': 'text/html' } })
+        : new Response(null, { status: 404 }),
+    } }
+    for (const url of ['https://genkou.snkisk.com/docs', 'https://docs.genkou.snkisk.com/', 'https://genkou.snkisk.com/en/']) {
+      const response = await worker.fetch(new Request(url), env)
+      expect(response.status).toBe(200)
+      const html = await response.text()
+      expect(html).toContain('https://genkou.snkisk.com/llms.txt')
+      if (url.includes('docs')) {
+        expect(html).toContain('encodeURIComponent')
+        expect(html).toContain('#v=1&amp;text=')
+      }
+    }
+    const missing = await worker.fetch(new Request('https://genkou.snkisk.com/missing.txt'), env)
+    expect(missing.status).toBe(404)
   })
 })
