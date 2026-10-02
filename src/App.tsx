@@ -377,8 +377,12 @@ export default function App() {
 }
 
 function DocumentationApp() {
-  const [languagePreference, setLanguagePreference] = useState<LanguagePreference>(initialLanguagePreference)
-  const shouldPersistLanguage = useRef(hasManualLanguagePreference())
+  const [languagePreference, setLanguagePreference] = useState<LanguagePreference>(() => {
+    if (window.location.pathname === '/ja/') return 'ja'
+    if (window.location.pathname === '/en/') return 'en'
+    return hasManualLanguagePreference() ? initialLanguagePreference() : 'ja'
+  })
+  const shouldPersistLanguage = useRef(hasManualLanguagePreference() && !['/ja/', '/en/'].includes(window.location.pathname))
   const [systemLanguage, setSystemLanguage] = useState(defaultLanguage)
   const [theme, setTheme] = useState<Theme>(() => stored('kantan:theme', 'system'))
   const [systemDark, setSystemDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
@@ -394,6 +398,18 @@ function DocumentationApp() {
     }
     document.documentElement.lang = language
     updateDocumentMetadata(documentCopy.title, documentCopy.description)
+    const pageUrl = `https://docs.genkou.snkisk.com/${language}/`
+    document.querySelector('link[rel="canonical"]')?.setAttribute('href', pageUrl)
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', pageUrl)
+    document.querySelector('meta[property="og:locale"]')?.setAttribute('content', language === 'ja' ? 'ja_JP' : 'en_US')
+    document.querySelector('meta[property="og:image:alt"]')?.setAttribute('content', homepageCopy[language].imageAlt)
+    const structuredData = document.getElementById('website-structured-data')
+    if (structuredData) structuredData.textContent = JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: '原稿小箱', alternateName: 'genkou.snkisk.com', url: pageUrl })
+    if (window.location.hostname === 'docs.genkou.snkisk.com' && ['/ja/', '/en/'].includes(window.location.pathname)) {
+      const url = new URL(window.location.href)
+      url.pathname = `/${language}/`
+      window.history.replaceState(window.history.state, '', url)
+    }
   }, [documentCopy.description, documentCopy.title, language, languagePreference])
 
   useEffect(() => {
@@ -414,11 +430,22 @@ function DocumentationApp() {
     updateThemeColor(theme === 'system' ? (systemDark ? 'dark' : 'light') : theme)
   }, [systemDark, theme])
 
+  const changeLanguage = (value: LanguagePreference) => {
+    shouldPersistLanguage.current = true
+    persist('kantan:language-manual', 'true')
+    setLanguagePreference(value)
+    if (window.location.hostname === 'docs.genkou.snkisk.com') {
+      const url = new URL(window.location.href)
+      url.pathname = `/${value === 'system' ? defaultLanguage() : value}/`
+      window.history.replaceState(window.history.state, '', url)
+    }
+  }
+
   return <main className="app-shell docs-shell">
     <header className="site-header">
       <a className="brand" href={`https://genkou.snkisk.com/${language}/`} aria-label={`${labels.serviceName} ${labels.home}`}><img src={brandIcon} alt="" aria-hidden="true" /><span>{labels.serviceName}</span></a>
       <div className="header-preferences">
-        <LanguageToggle value={languagePreference} onChange={(value) => { shouldPersistLanguage.current = true; persist('kantan:language-manual', 'true'); setLanguagePreference(value) }} labels={labels} />
+        <LanguageToggle value={languagePreference} onChange={changeLanguage} labels={labels} />
         <ThemeToggle value={theme} onChange={setTheme} labels={labels} />
       </div>
     </header>
@@ -680,7 +707,7 @@ function ManuscriptApp() {
       <div className="home-copy">
       <h1 id="home-heading">{homeCopy.heading}</h1>
       <p>{homeCopy.introduction}</p>
-      <a href="https://docs.genkou.snkisk.com/">{homeCopy.docsLink}</a>
+      <a href={`https://docs.genkou.snkisk.com/${language}/`}>{homeCopy.docsLink}</a>
       </div>
       <div className="home-actions">
         <button type="button" className="share-document" onClick={copyDocumentLink}>{language === 'ja' ? '本文と設定のリンクをコピー' : 'Copy text and settings link'}</button>

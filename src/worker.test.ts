@@ -81,7 +81,7 @@ describe('WorkerのAI仕様と文書host', () => {
     expect(response.headers.get('link')).toBeNull()
     expect(response.headers.get('content-type')).toContain('text/html')
     expect(html).toContain('<title>原稿小箱の使い方｜AIで文章と印刷リンクを作る</title>')
-    expect(html).toContain('content="https://docs.genkou.snkisk.com/"')
+    expect(html).toContain('content="https://docs.genkou.snkisk.com/ja/"')
     expect(html).toContain('AIの文章を、原稿小箱で原稿用紙に')
     expect(html).not.toContain('root fallback')
     expect(html).toContain('"name":"原稿小箱"')
@@ -133,7 +133,7 @@ describe('WorkerのAI仕様と文書host', () => {
 
   it('metadata helper escapes replacement text and rewrites docs canonical and fallback', () => {
     const html = renderDocumentationHtml(assetHtml)
-    expect(html).toContain('<link rel="canonical" href="https://docs.genkou.snkisk.com/" />')
+    expect(html).toContain('<link rel="canonical" href="https://docs.genkou.snkisk.com/ja/" />')
     expect(html).toContain('<main id="seo-fallback" class="seo-fallback">')
   })
 
@@ -156,4 +156,27 @@ describe('WorkerのAI仕様と文書host', () => {
     const missing = await worker.fetch(new Request('https://genkou.snkisk.com/missing.txt'), env)
     expect(missing.status).toBe(404)
   })
+  it.each(['ja', 'en'] as const)('docs %s URL fixes HTML language independently of browser', async language => {
+    const { env } = withAssets()
+    const response = await worker.fetch(new Request(`https://docs.genkou.snkisk.com/${language}/`, { headers: { 'accept-language': language === 'ja' ? 'en' : 'ja' } }), env)
+    const html = await response.text()
+    expect(html).toContain(`<html lang="${language}" data-initial-language="${language}">`)
+    expect(html).toContain(`rel="canonical" href="https://docs.genkou.snkisk.com/${language}/"`)
+    expect(html).toContain('hreflang="ja"')
+    expect(html).toContain('hreflang="en"')
+    expect(html).toContain('hreflang="x-default"')
+    expect(html).toContain(`https://genkou.snkisk.com/${language}/`)
+    expect(html).toContain(language === 'ja' ? 'AIの文章を、原稿小箱で原稿用紙に' : 'Print AI-written text on manuscript paper')
+    expect(html).toContain('encodeURIComponent')
+  })
+
+  it('docs slash redirects preserve query and unknown URLs remain 404', async () => {
+    const { env } = withAssets()
+    const response = await worker.fetch(new Request('https://docs.genkou.snkisk.com/en?q=keep'), env)
+    expect(response.status).toBe(308)
+    expect(response.headers.get('location')).toBe('https://docs.genkou.snkisk.com/en/?q=keep')
+    const missing = await worker.fetch(new Request('https://docs.genkou.snkisk.com/en/missing'), {ASSETS:{fetch:async()=>new Response(null,{status:404})}})
+    expect(missing.status).toBe(404)
+  })
+
 })

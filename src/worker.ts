@@ -1,4 +1,4 @@
-import { homepageCopy, type Language } from './lib/copy'
+import { homepageCopy, documentationCopy, type Language } from './lib/copy'
 
 export interface Env {
   ASSETS: {
@@ -11,8 +11,8 @@ const docsUrl = 'https://docs.genkou.snkisk.com/'
 const rootHosts = new Set(['genkou.snkisk.com'])
 const documentationHosts = new Set(['docs.genkou.snkisk.com'])
 const retiredHosts = new Set(['kantan.snkisk.com', 'docs.kantan.snkisk.com'])
-const docsTitle = '原稿小箱の使い方｜AIで文章と印刷リンクを作る'
-const docsDescription = 'AIへの短い依頼文から、文章と本文入りの原稿小箱リンクを作る方法。リンクを開いて内容を確認してから印刷・PDF保存できます。'
+const localizedDocsUrl = (language: Language) => `${docsUrl}${language}/`
+
 const localizedHomeUrl = (language: Language) => `${homeUrl}${language}/`
 
 function preferredLanguage(header: string | null): Language {
@@ -40,26 +40,36 @@ function replaceMeta(html: string, attribute: 'name' | 'property', key: string, 
   return html.replace(pattern, content)
 }
 
-export function renderDocumentationHtml(html: string): string {
+export function renderDocumentationHtml(html: string, language: Language = 'ja'): string {
+  const content = documentationCopy[language]
+  const docsTitle = content.title
+  const docsDescription = content.description
+  const pageUrl = localizedDocsUrl(language)
+  html = html.replace(/<html\b[^>]*>/i, `<html lang="${language}" data-initial-language="${language}">`)
   let result = html.replace(/<title\b[^>]*>[\s\S]*?<\/title>/i, `<title>${docsTitle}</title>`)
   result = replaceMeta(result, 'name', 'description', docsDescription)
   result = replaceMeta(result, 'property', 'og:title', docsTitle)
   result = replaceMeta(result, 'property', 'og:description', docsDescription)
-  result = replaceMeta(result, 'property', 'og:url', docsUrl)
+  result = replaceMeta(result, 'property', 'og:url', pageUrl)
   result = replaceMeta(result, 'name', 'twitter:title', docsTitle)
   result = replaceMeta(result, 'name', 'twitter:description', docsDescription)
-  result = result.replace(/<link\b(?=[^>]*\brel=(['"])canonical\1)[^>]*>/i, `<link rel="canonical" href="${docsUrl}" />`)
+  result = result.replace(/<link\b(?=[^>]*\brel=(['"])canonical\1)[^>]*>/i, `<link rel="canonical" href="${pageUrl}" />`)
 
+  result = replaceMeta(result, 'property', 'og:locale', language === 'ja' ? 'ja_JP' : 'en_US')
+  result = replaceMeta(result, 'property', 'og:image:alt', homepageCopy[language].imageAlt)
+  result = result.replace('</head>', `<link rel="alternate" hreflang="ja" href="${localizedDocsUrl('ja')}" /><link rel="alternate" hreflang="en" href="${localizedDocsUrl('en')}" /><link rel="alternate" hreflang="x-default" href="${docsUrl}" /></head>`)
   const structuredData = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: '原稿小箱',
     alternateName: 'genkou.snkisk.com',
-    url: docsUrl,
+    url: pageUrl,
   })
   result = result.replace(/<script\b(?=[^>]*\bid=(['"])website-structured-data\1)[^>]*>[\s\S]*?<\/script>/i, `<script type="application/ld+json" id="website-structured-data">${structuredData}</script>`)
 
-  const fallback = `<main id="seo-fallback" class="seo-fallback"><p>原稿小箱の使い方</p><h1>AIの文章を、原稿小箱で原稿用紙に</h1><p>題材を伝えて文章と本文入りリンクをAIに依頼できます。リンクを開き、内容を確認してから印刷またはPDF保存してください。</p><p>本文と設定はURLの # より後ろに含まれます。この部分はサイトへ送信されませんが、リンクを受け取った人には本文が読めるため、秘密の文章や個人情報を含む内容は共有しないでください。</p><p><a href="${homeUrl}">原稿小箱を開く</a></p><h2>本文入りリンクの作り方</h2><p>本文を encodeURIComponent でURLエンコードし、<code>https://genkou.snkisk.com/#v=1&amp;text=本文</code> の text に指定します。設定を省略すると標準の原稿用紙になります。本文の上限は20,000 Unicode文字です。</p><p><a href="${homeUrl}#v=1&amp;text=%E4%BD%9C%E6%96%87%E3%81%A7%E3%81%99%E3%80%82">「作文です。」を開くサンプル</a></p><p><a href="${homeUrl}llms.txt">AI向け印刷リンク仕様と全設定</a></p></main>`
+  const japaneseFallback = `<main id="seo-fallback" class="seo-fallback"><p>原稿小箱の使い方</p><h1>AIの文章を、原稿小箱で原稿用紙に</h1><p>題材を伝えて文章と本文入りリンクをAIに依頼できます。リンクを開き、内容を確認してから印刷またはPDF保存してください。</p><p>本文と設定はURLの # より後ろに含まれます。この部分はサイトへ送信されませんが、リンクを受け取った人には本文が読めるため、秘密の文章や個人情報を含む内容は共有しないでください。</p><p><a href="${homeUrl}">原稿小箱を開く</a></p><h2>本文入りリンクの作り方</h2><p>本文を encodeURIComponent でURLエンコードし、<code>https://genkou.snkisk.com/#v=1&amp;text=本文</code> の text に指定します。設定を省略すると標準の原稿用紙になります。本文の上限は20,000 Unicode文字です。</p><p><a href="${homeUrl}#v=1&amp;text=%E4%BD%9C%E6%96%87%E3%81%A7%E3%81%99%E3%80%82">「作文です。」を開くサンプル</a></p><p><a href="${homeUrl}llms.txt">AI向け印刷リンク仕様と全設定</a></p></main>`
+  const englishFallback = `<main id="seo-fallback" class="seo-fallback"><p>${content.eyebrow}</p><h1>${content.heading}</h1><p>${content.lead}</p><h2>${content.instructionHeading}</h2><p>${content.instruction}</p><h2>${content.privacyHeading}</h2><p>${content.privacy}</p><h2>Creating a text-filled link</h2><p>Encode the text using encodeURIComponent and set text in <code>https://genkou.snkisk.com/#v=1&amp;text=TEXT</code>. The limit is 20,000 Unicode characters.</p><p><a href="${homeUrl}#v=1&amp;text=Sample">Open a sample</a></p><p><a href="${localizedHomeUrl('en')}">${content.start}</a></p><p><a href="${homeUrl}llms.txt">AI print-link specification and settings</a></p></main>`
+  const fallback = language === 'ja' ? japaneseFallback.replace(`href="${homeUrl}">`, `href="${localizedHomeUrl('ja')}">`) : englishFallback
   return result.replace(/<main\b(?=[^>]*\bid=(['"])seo-fallback\1)[^>]*>[\s\S]*?<\/main>/i, fallback)
 }
 
@@ -80,7 +90,7 @@ export function renderHomeHtml(html: string, language: Language): string {
   result = result.replace('</head>', `<link rel="alternate" hreflang="ja" href="${localizedHomeUrl('ja')}" /><link rel="alternate" hreflang="en" href="${localizedHomeUrl('en')}" /><link rel="alternate" hreflang="x-default" href="${homeUrl}" /></head>`)
   result = result.replace(/<script\b(?=[^>]*\bid=(['"])website-structured-data\1)[^>]*>[\s\S]*?<\/script>/i, `<script type="application/ld+json" id="website-structured-data">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: '原稿小箱', alternateName: 'genkou.snkisk.com', url: pageUrl })}</script>`)
   if (language === 'en') {
-    result = result.replace(/<main\b(?=[^>]*\bid=(['"])seo-fallback\1)[^>]*>[\s\S]*?<\/main>/i, `<main id="seo-fallback" class="seo-fallback"><h1>${content.heading}</h1><p>${content.introduction}</p><p><a href="${docsUrl}">${content.docsLink}</a></p><p><a href="${homeUrl}llms.txt">AI print-link specification</a></p><noscript>${content.javascriptRequired}</noscript></main>`)
+    result = result.replace(/<main\b(?=[^>]*\bid=(['"])seo-fallback\1)[^>]*>[\s\S]*?<\/main>/i, `<main id="seo-fallback" class="seo-fallback"><h1>${content.heading}</h1><p>${content.introduction}</p><p><a href="${localizedDocsUrl(language)}">${content.docsLink}</a></p><p><a href="${homeUrl}llms.txt">AI print-link specification</a></p><noscript>${content.javascriptRequired}</noscript></main>`)
   }
   return result
 }
@@ -101,11 +111,11 @@ export default {
     if (retiredHosts.has(url.hostname)) return new Response(null, { status: 404 })
     const isDocumentationHost = documentationHosts.has(url.hostname)
     const isRootHost = rootHosts.has(url.hostname)
-    if (isRootHost && (url.pathname === '/ja' || url.pathname === '/en')) {
+    if ((isRootHost || isDocumentationHost) && (url.pathname === '/ja' || url.pathname === '/en')) {
       url.pathname += '/'
       return Response.redirect(url.toString(), 308)
     }
-    const isDocsPage = (isDocumentationHost && (url.pathname === '/' || url.pathname === '/index.html'))
+    const isDocsPage = (isDocumentationHost && (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/ja/' || url.pathname === '/en/'))
       || (isRootHost && url.pathname === '/docs')
     const isRootPage = isRootHost && (url.pathname === '/' || url.pathname === '/ja/' || url.pathname === '/en/')
     const homeLanguage: Language = url.pathname === '/ja/' ? 'ja' : url.pathname === '/en/' ? 'en' : preferredLanguage(request.headers.get('accept-language'))
@@ -121,7 +131,7 @@ export default {
     if (!response.headers.get('content-type')?.includes('text/html')) return response
 
     if (isDocsPage && request.method === 'GET') {
-      return withUncompressedHtml(response, renderDocumentationHtml(await response.text()))
+      return withUncompressedHtml(response, renderDocumentationHtml(await response.text(), url.pathname === '/en/' ? 'en' : 'ja'))
     }
 
     if (!isRootPage || request.method !== 'GET') return response
