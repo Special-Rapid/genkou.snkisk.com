@@ -6,6 +6,7 @@ import { createPrintLink, parsePrintLink, type PrintLinkPayload, type PrintLinkR
 
 import { acceptsOrientation, orientationAt, readSavedDocument, persistDocument, type DocumentSaveState, type OrientationRun } from './lib/text-orientation'
 import { useManuscriptDocument } from './lib/use-manuscript-document'
+import { SelectionOrientationPopover } from './SelectionOrientationPopover'
 
 type Theme = 'system' | 'light' | 'dark'
 type PaperId = 'b5' | 'a4'
@@ -676,23 +677,24 @@ function ManuscriptApp() {
     </header>
 
     <section className="home-intro" aria-labelledby="home-heading">
+      <div className="home-copy">
       <h1 id="home-heading">{homeCopy.heading}</h1>
       <p>{homeCopy.introduction}</p>
       <a href="https://docs.genkou.snkisk.com/">{homeCopy.docsLink}</a>
+      </div>
+      <div className="home-actions">
+        <button type="button" className="share-document" onClick={copyDocumentLink}>{language === 'ja' ? '本文と設定のリンクをコピー' : 'Copy text and settings link'}</button>
+        <RootPrintPrompt key={language} prompt={rootPromptCopy[language]} labels={documentationCopy[language]} />
+      </div>
     </section>
-
-    <RootPrintPrompt key={language} prompt={rootPromptCopy[language]} labels={documentationCopy[language]} />
 
     <div className="workspace">
       <section className="editor" aria-label={labels.body}>
         <div className="field-group text-field">
           <label htmlFor="source-text">{labels.body}</label>
-          <textarea ref={editor.textarea} id="source-text" value={text} {...editor.inputProps} placeholder={labels.hint} spellCheck="false" />
-          <div className="character-orientation-controls" role="group" aria-label={language === 'ja' ? '選択した英数字の向き' : 'Selected letters and numbers'}>
-            {(['default', 'upright', 'sideways'] as const).map(mode => <button key={mode} type="button" disabled={!canOrient} aria-pressed={selectedModes.size === 1 && selectedModes.has(mode)} onClick={() => editor.orient(mode === 'default' ? undefined : mode)}>{language === 'ja' ? ({ default: '標準', upright: '正立', sideways: '横倒し' })[mode] : ({ default: 'Default', upright: 'Upright', sideways: 'Sideways' })[mode]}</button>)}
-          </div>
-          <p className="orientation-hint" role="status">{language === 'ja' ? (direction === 'horizontal' ? '文字の向きは縦書きで反映されます。' : selectedModes.size > 1 ? '選択範囲の向きは混在しています。' : '英字・数字を選択して向きを指定できます。') : (direction === 'horizontal' ? 'Orientation is applied in vertical writing.' : selectedModes.size > 1 ? 'The selection has mixed orientations.' : 'Select letters or numbers to set their orientation.')}</p>
-          <button type="button" className="share-document" onClick={copyDocumentLink}>{language === 'ja' ? '本文と設定のリンクをコピー' : 'Copy text and settings link'}</button>
+          <textarea ref={editor.textarea} id="source-text" aria-describedby="orientation-help" value={text} {...editor.inputProps} placeholder={labels.hint} spellCheck="false" />
+          <SelectionOrientationPopover input={editor.textarea} selection={editor.selected} text={text} enabled={direction === 'vertical' && canOrient} language={language} modes={selectedModes} onOrient={editor.orient} />
+          <span id="orientation-help" className="sr-only">{language === 'ja' ? '縦書きで英字・数字を選択すると向きを指定できます。Tabで操作へ移動し、Escapeで閉じます。' : 'Select letters or numbers in vertical writing to set their orientation. Tab enters the controls; Escape closes them.'}</span>
           {saveState !== 'saved' && <p className="draft-save-error" role="alert">{language === 'ja'
             ? saveState === 'text-only' ? '本文のみ保存されました。文字の向きは保存できていません。閉じる前に本文と設定のリンクを控えてください。' : '本文と文字の向きをブラウザに保存できません。閉じる前に内容を控えてください。'
             : saveState === 'text-only' ? 'Only the text was saved. Character orientations could not be saved. Keep a text and settings link before closing.' : 'Text and orientations could not be saved in this browser. Keep a copy before closing.'}</p>}
