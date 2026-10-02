@@ -1,4 +1,4 @@
-export type CharacterOrientation = 'upright' | 'sideways'
+export type CharacterOrientation = 'upright' | 'sideways' | 'left'
 export type OrientationRun = { start: number; end: number; mode: CharacterOrientation }
 export type ManuscriptDocument = { text: string; runs: OrientationRun[] }
 export const acceptsOrientation = (character: string) => /^(?:\p{Script=Latin}|\p{Decimal_Number})$/u.test(character)
@@ -29,7 +29,7 @@ export function validateRuns(text: string, value: unknown): value is Orientation
   if (!Array.isArray(value) || value.length > 20_000) return false
   let previousEnd = 0
   for (const run of value) {
-    if (!run || !Number.isInteger(run.start) || !Number.isInteger(run.end) || run.start < previousEnd || run.start >= run.end || run.end > text.length || !['upright', 'sideways'].includes(run.mode)) return false
+    if (!run || !Number.isInteger(run.start) || !Number.isInteger(run.end) || run.start < previousEnd || run.start >= run.end || run.end > text.length || !['upright', 'sideways', 'left'].includes(run.mode)) return false
     if (!Array.from(text.slice(run.start, run.end)).every(acceptsOrientation)) return false
     previousEnd = run.end
   }
@@ -66,7 +66,7 @@ export function editDocument(document: ManuscriptDocument, text: string, selecti
 export function readSavedDocument(value: string | null, legacy: string): ManuscriptDocument {
   try {
     const parsed = JSON.parse(value ?? 'null')
-    if (parsed?.version === 1 && typeof parsed.text === 'string' && validateRuns(parsed.text, parsed.runs)) return { text: parsed.text, runs: normalizeRuns(parsed.text, parsed.runs) }
+    if ([1, 2].includes(parsed?.version) && typeof parsed.text === 'string' && validateRuns(parsed.text, parsed.runs)) return { text: parsed.text, runs: normalizeRuns(parsed.text, parsed.runs) }
   } catch { /* Recover the old plain text if saved JSON is malformed. */ }
   return { text: legacy, runs: [] }
 }
@@ -99,7 +99,7 @@ export function resolveInputRange(previous: string, text: string, before: InputR
 export type DocumentSaveState = 'saved' | 'text-only' | 'failed'
 export function persistDocument(storage: Pick<Storage, 'setItem' | 'removeItem'>, document: ManuscriptDocument): DocumentSaveState {
   try {
-    storage.setItem('genkou:document', JSON.stringify({ version: 1, ...document }))
+    storage.setItem('genkou:document', JSON.stringify({ version: document.runs.some(run => run.mode === 'left') ? 2 : 1, ...document }))
   } catch {
     // A stale combined entry must never shadow a newer plain-text fallback.
     try { storage.removeItem('genkou:document') } catch { return 'failed' }

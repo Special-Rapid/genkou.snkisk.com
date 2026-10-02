@@ -312,7 +312,7 @@ function ThemeToggle({ value, onChange, labels }: { value: Theme; onChange: (the
 
 function ManuscriptPage({ runs, direction, paper, paperOrientation, composition, cells, page, total, fontFamily, fontSize, margin, marginPercentage, gridColor, showServiceMark, printGridMetrics, labels, language }: { direction: Direction; paper: PaperId; paperOrientation: PaperOrientation; composition: CompositionId; runs: OrientationRun[]; cells: IndexedCell[]; page: number; total: number; fontFamily: string; fontSize: string; margin: Margin; marginPercentage: number; gridColor: string; showServiceMark: boolean; printGridMetrics: GridMetrics; labels: Labels; language: Language }) {
   const renderCell = (cell: IndexedCell, index: number) => {
-    const mode = cell && direction === 'vertical' ? orientationAt(runs, cell.sourceStart) : undefined
+    const mode = cell && direction === 'vertical' && acceptsOrientation(cell.character) ? orientationAt(runs, cell.sourceStart) ?? 'upright' : undefined
     return <span key={index} className="manuscript-cell" data-source-start={cell?.sourceStart} data-character-orientation={mode}>{mode ? <span className={`oriented-character ${mode}`}>{cell?.character}</span> : cell?.character}</span>
   }
   const layout = compositions[composition]
@@ -473,7 +473,7 @@ function ManuscriptApp() {
   const canOrient = !editor.composing && Array.from(selectedText).some(acceptsOrientation)
   const selectedModes = new Set<string>()
   let selectedOffset = editor.selected.start
-  for (const character of selectedText) { if (acceptsOrientation(character)) selectedModes.add(orientationAt(runs, selectedOffset) ?? 'default'); selectedOffset += character.length }
+  for (const character of selectedText) { if (acceptsOrientation(character)) selectedModes.add(orientationAt(runs, selectedOffset) ?? 'upright'); selectedOffset += character.length }
   const [direction, setDirection] = useState<Direction>(() => linkedSettings?.direction ?? 'vertical')
   const [paper, setPaper] = useState<PaperId>(() => linkedSettings?.paper ?? 'b5')
   const [paperOrientation, setPaperOrientation] = useState<PaperOrientation>(() => linkedSettings?.orientation ?? ((linkedSettings?.direction ?? 'vertical') === 'vertical' ? 'landscape' : 'portrait'))

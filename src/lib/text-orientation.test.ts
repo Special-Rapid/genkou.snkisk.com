@@ -87,4 +87,26 @@ describe('selected character orientation', () => {
     expect(persistDocument({ setItem: () => { throw new Error('blocked') }, removeItem: () => { throw new Error('blocked') } }, { text: 'new', runs: [] })).toBe('failed')
   })
 
+  it('roundtrips left-facing v3 and rejects the new mode under v2', () => {
+    const doc = orientSelection({ text: '日A😀12 Z', runs: [] }, 0, 9, 'left')
+    expect(doc.runs).toEqual([{start:1,end:2,mode:'left'}, {start:4,end:6,mode:'left'}, {start:7,end:8,mode:'left'}])
+    const hash = createPrintLink({...doc,direction:'vertical'})
+    expect(hash).toContain('v=3&')
+    const result = parsePrintLink(hash)
+    expect(result.kind === 'valid' && result.payload.runs).toEqual(doc.runs)
+    expect(parsePrintLink(hash.replace('v=3', 'v=2')).kind).toBe('invalid')
+    expect(createPrintLink({...doc,runs:doc.runs.map(run=>({...run,mode:'sideways'}))})).toContain('v=2&')
+    expect(createPrintLink({text:doc.text})).toContain('v=1&')
+  })
+  it('persists and restores left-facing edits with a versioned document', () => {
+    const doc = orientSelection({text:'ABC',runs:[]},1,2,'left')
+    const values = new Map<string,string>()
+    const storage = {setItem:(key:string,value:string)=>{values.set(key,value)},removeItem:(key:string)=>{values.delete(key)}}
+    expect(persistDocument(storage,doc)).toBe('saved')
+    expect(JSON.parse(values.get('genkou:document')!).version).toBe(2)
+    expect(readSavedDocument(values.get('genkou:document')!, '')).toEqual(doc)
+    expect(editDocument(doc,'AxBC',{start:1,end:1}).runs).toEqual([{start:2,end:3,mode:'left'}])
+    expect(orientSelection(doc,1,2,'sideways').runs).toEqual([{start:1,end:2,mode:'sideways'}])
+  })
+
 })

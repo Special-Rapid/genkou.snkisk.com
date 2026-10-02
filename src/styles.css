@@ -159,3 +159,5 @@ textarea { min-height: 348px; padding: var(--space-3); line-height: 1.75; resize
 @media print { .oriented-character.sideways { transform: rotate(90deg); } }
 
 .draft-save-error { padding: var(--space-2); border: 1px solid var(--line-strong); border-radius: 6px; background: var(--error); color: var(--ink); font-size: 13px; }
+
+.oriented-character.left { transform: rotate(-90deg); }
