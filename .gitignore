@@ -5,3 +5,6 @@ dist/
 .dev.vars*
 !.dev.vars.example
 generated/
+
+# Same-origin compatibility favicon is assembled from verified CDN PNGs.
+/public/favicon.ico
