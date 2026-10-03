@@ -50,6 +50,7 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, summary:focu
 .prompt-copy-status { min-height: 1.5em; margin: var(--space-1) 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
 .root-prompt { display: flex; align-items: start; min-width: 0; }
 .root-prompt .prompt-copy-control-compact { position: relative; display: grid; justify-items: start; max-width: 100%; }
+.home-actions .prompt-copy-control-compact { position: static; }
 .root-prompt .prompt-copy-button { display: inline-flex; align-items: center; gap: var(--space-1); min-width: 0; min-height: 44px; padding: 0 var(--space-2); }
 .root-prompt .prompt-copy-button-icon { display: grid; width: 22px; height: 22px; place-items: center; }
 .root-prompt .prompt-copy-button-icon svg { width: 18px; height: 18px; }
@@ -160,4 +161,3 @@ textarea { min-height: 348px; padding: var(--space-3); line-height: 1.75; resize
 
 .draft-save-error { padding: var(--space-2); border: 1px solid var(--line-strong); border-radius: 6px; background: var(--error); color: var(--ink); font-size: 13px; }
 
-.home-actions .prompt-copy-control-compact { position: static; }
