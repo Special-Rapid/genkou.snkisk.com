@@ -15,11 +15,17 @@
 
 ## ブランドアセット
 
-`public/brand-icon.svg` がロゴアイコンの正本、`public/og-image.svg` がOG画像の背景・レイアウト正本です。アイコンやOG画像の元データを変更したら、次のコマンドでfavicon（ICO/PNG）、Apple touch icon、web app icon（192/512px）、OG画像（PNG/WebP）を再生成します。
+`assets/brand/brand-icon.svg` がロゴの生成正本、`assets/brand/og-image.svg` がOG背景・レイアウトの生成正本です。ブラウザへ配信する10ファイルはR2の公開CDN `images.snkisk.com` へ移し、URL・MIME・bytes・SHA256を `assets/brand/cdn-assets.json` で追跡します。headerのlight/darkマーク、SVG/PNG favicon、Apple touch icon、OG/Twitter PNG、manifestの192/512アイコンがCDNを参照します。OG SVG/WebPも配信用コピーをpublicから外していますが、現画面の参照は従来通りPNGです。
 
 ```bash
 npm run generate:brand-assets
 ```
+
+再生成先はGit管理外の `generated/brand-assets/` です。publicへ画像を再配置せず、CDNへのuploadも行いません。デザイン変更時は出力を確認し、正規のadminUIで再upload・公開bytes確認後にmappingとHTML/manifestを更新してください。PNGの生成は利用フォント環境にも依存するため、同じURLへ未確認の再生成画像を置き換えません。
+
+`public/favicon.ico` は、adminUIがICOに対応せずuploadしていない唯一の配信用例外です。16/32/48pxを含む既存の同一origin fallbackと `/favicon.ico` の暗黙取得を維持します。更新が必要な場合だけ、生成結果を確認して `generated/brand-assets/favicon.ico` から明示的に同期します。生成正本SVGは編集・再生成用で、配信bundleには含めません。
+
+manifest自身はsame-originの `/site.webmanifest` に残し、id/start_url/scope/displayを変更しません。新しいservice workerやoffline機能は追加しません。CDN画像の通常表示、CORSによるJS読取、ブラウザのmanifest処理、Appleホーム画面追加は別の確認項目です。OSへのインストール・Apple実機・タブ内faviconの最終採用は実機で未確認のまま成功扱いしません。印刷/PDFのcapture対象は紙面だけで、headerのCDNマークをcanvasへ描画しません。
 
 ## AIで作った文章を印刷する
 

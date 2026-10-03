@@ -7,6 +7,7 @@ import { createPrintLink, parsePrintLink, type PrintLinkPayload, type PrintLinkR
 import { acceptsOrientation, orientationAt, readSavedDocument, persistDocument, type DocumentSaveState, type OrientationRun } from './lib/text-orientation'
 import { useManuscriptDocument } from './lib/use-manuscript-document'
 import { SelectionOrientationPopover } from './SelectionOrientationPopover'
+import brandAssets from '../assets/brand/cdn-assets.json'
 
 type Theme = 'system' | 'light' | 'dark'
 type PaperId = 'b5' | 'a4'
@@ -87,7 +88,7 @@ function updateThemeColor(theme: 'light' | 'dark') {
 }
 
 function brandIconSource(theme: Theme, systemDark: boolean) {
-  return theme === 'dark' || (theme === 'system' && systemDark) ? '/brand-icon-dark.svg' : '/brand-icon.svg'
+  return theme === 'dark' || (theme === 'system' && systemDark) ? brandAssets['brand-icon-dark.svg'].url : brandAssets['brand-icon.svg'].url
 }
 
 function stored<T>(key: string, fallback: T): T {
