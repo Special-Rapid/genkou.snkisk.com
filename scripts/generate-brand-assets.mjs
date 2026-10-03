@@ -1,16 +1,20 @@
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import sharp from 'sharp'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const publicDirectory = resolve(root, 'public')
-const iconSource = await readFile(resolve(publicDirectory, 'brand-icon.svg'))
-const ogSource = await readFile(resolve(publicDirectory, 'og-image.svg'))
+const sourceDirectory = resolve(root, 'assets/brand')
+const outputDirectory = resolve(root, 'generated/brand-assets')
+await mkdir(outputDirectory, { recursive: true })
+const iconSource = await readFile(resolve(sourceDirectory, 'brand-icon.svg'))
+const ogSource = await readFile(resolve(sourceDirectory, 'og-image.svg'))
+await writeFile(resolve(outputDirectory, 'brand-icon.svg'), iconSource)
+await writeFile(resolve(outputDirectory, 'og-image.svg'), ogSource)
 const iconSourceText = iconSource.toString()
 const darkIconSourceText = iconSourceText.replace('fill="#f4f5f6"', 'fill="#151515"').replace('fill="#fff"', 'fill="#242424"')
-if (darkIconSourceText === iconSourceText) throw new Error('Expected both icon background colors in public/brand-icon.svg.')
-await writeFile(resolve(publicDirectory, 'brand-icon-dark.svg'), darkIconSourceText)
+if (darkIconSourceText === iconSourceText) throw new Error('Expected both icon background colors in assets/brand/brand-icon.svg.')
+await writeFile(resolve(outputDirectory, 'brand-icon-dark.svg'), darkIconSourceText)
 
 async function renderIcon(size) {
   return sharp(iconSource)
@@ -46,17 +50,17 @@ const sizes = [16, 32, 48, 180, 192, 512]
 const images = new Map()
 for (const size of sizes) images.set(size, await renderIcon(size))
 
-await writeFile(resolve(publicDirectory, 'favicon-32.png'), images.get(32))
-await writeFile(resolve(publicDirectory, 'favicon-48.png'), images.get(48))
-await writeFile(resolve(publicDirectory, 'apple-touch-icon.png'), images.get(180))
-await writeFile(resolve(publicDirectory, 'icon-192.png'), images.get(192))
-await writeFile(resolve(publicDirectory, 'icon-512.png'), images.get(512))
-await writeFile(resolve(publicDirectory, 'favicon.ico'), encodeIco([16, 32, 48].map((size) => ({ size, data: images.get(size) }))))
+await writeFile(resolve(outputDirectory, 'favicon-32.png'), images.get(32))
+await writeFile(resolve(outputDirectory, 'favicon-48.png'), images.get(48))
+await writeFile(resolve(outputDirectory, 'apple-touch-icon.png'), images.get(180))
+await writeFile(resolve(outputDirectory, 'icon-192.png'), images.get(192))
+await writeFile(resolve(outputDirectory, 'icon-512.png'), images.get(512))
+await writeFile(resolve(outputDirectory, 'favicon.ico'), encodeIco([16, 32, 48].map((size) => ({ size, data: images.get(size) }))))
 
 const ogBase = await sharp(ogSource).png().toBuffer()
 const ogIcon = await sharp(iconSource).resize(96, 96, { fit: 'contain' }).png().toBuffer()
 const ogPng = await sharp(ogBase).composite([{ input: ogIcon, left: 104, top: 85 }]).png({ compressionLevel: 9 }).toBuffer()
-await writeFile(resolve(publicDirectory, 'og-image.png'), ogPng)
-await sharp(ogPng).webp({ quality: 92 }).toFile(resolve(publicDirectory, 'og-image.webp'))
+await writeFile(resolve(outputDirectory, 'og-image.png'), ogPng)
+await sharp(ogPng).webp({ quality: 92 }).toFile(resolve(outputDirectory, 'og-image.webp'))
 
-console.log(`Generated light/dark SVG marks, favicon 16/32/48 ICO, 32/48 PNG, 180 Apple, 192/512 web icons, and 1200x630 PNG/WebP OG image from SVG sources.`)
+console.log(`Generated light/dark SVG marks, favicon 16/32/48 ICO, 32/48 PNG, 180 Apple, 192/512 web icons, and 1200x630 PNG/WebP OG image in generated/brand-assets from assets/brand SVG sources. No public files or CDN uploads were changed.`)

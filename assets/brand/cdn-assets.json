@@ -1,0 +1,62 @@
+{
+  "apple-touch-icon.png": {
+    "url": "https://images.snkisk.com/genkou.snkisk.com/ac557312-33c6-4dae-90b2-148df92de069.png",
+    "bytes": 2950,
+    "sha256": "ef1ccbd7749da24c5c27dbfa33236cdefffbfdc420043cb34a5e5e4134376e28",
+    "mime": "image/png"
+  },
+  "brand-icon-dark.svg": {
+    "url": "https://images.snkisk.com/genkou.snkisk.com/db2dd215-e615-47d5-b06e-6f3dc5a400e1.svg",
+    "bytes": 517,
+    "sha256": "32fcc4603adcb202d8e3f7b875631745ba9198167116c1cf97bda84fa19737d9",
+    "mime": "image/svg+xml"
+  },
+  "brand-icon.svg": {
+    "url": "https://images.snkisk.com/genkou.snkisk.com/0e923d5d-66cd-438c-89d1-e4db5a10921f.svg",
+    "bytes": 514,
+    "sha256": "197a663a22c5c3b71b522608e5bd042e17dce21698a9de2a694b3da8a1616575",
+    "mime": "image/svg+xml"
+  },
+  "favicon-32.png": {
+    "url": "https://images.snkisk.com/genkou.snkisk.com/b4127f99-7fc0-4a71-aaac-a12f89e79c82.png",
+    "bytes": 550,
+    "sha256": "a69582ab314c2c562f824f7abb2276b86b4c56339f2bedcd740e6e7f9eaf08f7",
+    "mime": "image/png"
+  },
+  "favicon-48.png": {
+    "url": "https://images.snkisk.com/genkou.snkisk.com/1dbbd070-c6fe-4b2f-8fc7-4e79603f6f5e.png",
+    "bytes": 898,
+    "sha256": "273883526f740f0be3a10378ea1c3ec8af0833b751cecf74c4e249d380138234",
+    "mime": "image/png"
+  },
+  "icon-192.png": {
+    "url": "https://images.snkisk.com/genkou.snkisk.com/37c236b4-479a-4a10-8cc3-9bad683e9503.png",
+    "bytes": 2519,
+    "sha256": "0be629dc050b25f7f6adbd16987b64ed2ac45fac5db033176af5f06a4c99979e",
+    "mime": "image/png"
+  },
+  "icon-512.png": {
+    "url": "https://images.snkisk.com/genkou.snkisk.com/27b53087-7590-4c14-80ee-452932ce7ee2.png",
+    "bytes": 9065,
+    "sha256": "6507738a96c4620de001a1ea8d2e1d3a3c54f335307d8af0c2472865d362fb52",
+    "mime": "image/png"
+  },
+  "og-image.png": {
+    "url": "https://images.snkisk.com/genkou.snkisk.com/a6e9e137-d1bc-4bf8-a57e-20a30db3a10b.png",
+    "bytes": 32128,
+    "sha256": "c4764b56c66c497984a601e3ec49cdf63fd332d39d43b3e6f6ee19e9940088c2",
+    "mime": "image/png"
+  },
+  "og-image.svg": {
+    "url": "https://images.snkisk.com/genkou.snkisk.com/9ba198cd-c2f4-4547-b02d-17a9f3d75fa9.svg",
+    "bytes": 1091,
+    "sha256": "52e2fbe9f3b80716321ee41dc0873935e81616c0c2b6b4dbceb1f20ac1d5896a",
+    "mime": "image/svg+xml"
+  },
+  "og-image.webp": {
+    "url": "https://images.snkisk.com/genkou.snkisk.com/c47dd94e-27f6-4cdb-a253-7f258b5d89eb.webp",
+    "bytes": 22498,
+    "sha256": "33700054448755b9135708f3ddb2d3efde4553fa6e8eaa6582d07ce0e4cbe906",
+    "mime": "image/webp"
+  }
+}
