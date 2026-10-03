@@ -107,7 +107,7 @@ export function SelectionOrientationPopover({ input, selection, text, enabled, l
         buttons[event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (index + (event.key === 'ArrowLeft' ? -1 : 1) + buttons.length) % buttons.length]?.focus()
       }
     }}>
-    {(['default', 'upright', 'sideways'] as const).map(mode => <button key={mode} type="button" aria-pressed={modes.size === 1 && modes.has(mode)} onClick={() => onOrient(mode === 'default' ? undefined : mode)}>{language === 'ja' ? ({ default: '標準', upright: '正立', sideways: '横倒し' })[mode] : ({ default: 'Default', upright: 'Upright', sideways: 'Sideways' })[mode]}</button>)}
+    {(['sideways', 'upright', 'left'] as const).map(mode => <button key={mode} type="button" aria-pressed={modes.size === 1 && modes.has(mode)} onClick={() => onOrient(mode)}>{language === 'ja' ? ({ sideways: '右向き', upright: '上向き', left: '左向き' })[mode] : ({ sideways: 'Right', upright: 'Up', left: 'Left' })[mode]}</button>)}
     {modes.size > 1 && <span className="sr-only" role="status">{language === 'ja' ? '選択範囲の向きは混在しています。' : 'The selection has mixed orientations.'}</span>}
   </div>
 }

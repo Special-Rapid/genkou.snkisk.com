@@ -56,16 +56,16 @@ export function parsePrintLink(hash: string): PrintLinkResult {
 
   const params = new URLSearchParams(fragment)
   if (!params.has('v')) return { kind: 'absent' }
-  if (!['1', '2'].includes(params.get('v') ?? '') || !params.has('text')) return { kind: 'invalid' }
+  if (!['1', '2', '3'].includes(params.get('v') ?? '') || !params.has('text')) return { kind: 'invalid' }
 
   const text = params.get('text') ?? ''
   if (Array.from(text).length > maximumPrintLinkCharacters) return { kind: 'too-long' }
 
   let runs: OrientationRun[] | undefined
-  if (params.get('v') === '2') {
+  if (['2', '3'].includes(params.get('v') ?? '')) {
     try {
       const value: unknown = JSON.parse(params.get('runs') ?? '[]')
-      if (!validateRuns(text, value)) return { kind: 'invalid' }
+      if (!validateRuns(text, value) || (params.get('v') === '2' && value.some(run => run.mode === 'left'))) return { kind: 'invalid' }
       runs = value
     } catch { return { kind: 'invalid' } }
   }
@@ -108,7 +108,7 @@ export function parsePrintLink(hash: string): PrintLinkResult {
 
 /** Fragment-only serialization: body and formatting are not sent in HTTP requests. */
 export function createPrintLink(payload: PrintLinkPayload): string {
-  const params = new URLSearchParams({ v: payload.runs?.length ? '2' : '1', text: payload.text })
+  const params = new URLSearchParams({ v: payload.runs?.some(run => run.mode === 'left') ? '3' : payload.runs?.length ? '2' : '1', text: payload.text })
   for (const [key, value] of Object.entries(payload)) {
     if (key === 'text' || value === undefined) continue
     if (key === 'runs') { if (payload.runs?.length) params.set(key, JSON.stringify(value)); continue }
