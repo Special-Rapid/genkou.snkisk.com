@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useId, useMemo, useRef, useState } from 'react'
 import { copy, documentationCopy, homepageCopy, rootPromptCopy, type Labels, type Language } from './lib/copy'
 import { manuscriptCharacters, manuscriptDisplayCells, indexedManuscriptPages, pageTotal, type Direction, type IndexedCell } from './lib/layout'
 import { gridMetricsForFrame, type GridMetrics } from './lib/grid-metrics'
@@ -133,7 +133,8 @@ type PromptCopyLabels = {
   copyPromptError: string
 }
 
-function PromptCopyButton({ text, labels, compact = false, fallbackLabel }: { text: string; labels: PromptCopyLabels; compact?: boolean; fallbackLabel?: string }) {
+function PromptCopyButton({ text, labels, compact = false, fallbackLabel, invalid = false, showFeedback = true, onCopyStart, onCopied, onError }: { text: string; labels: PromptCopyLabels; compact?: boolean; fallbackLabel?: string; invalid?: boolean; showFeedback?: boolean; onCopyStart?: () => void; onCopied?: () => void; onError?: () => void }) {
+  const feedbackId = useId()
   const [status, setStatus] = useState<'idle' | 'copying' | 'copied' | 'error'>('idle')
   const [copiedText, setCopiedText] = useState('')
   const latestText = useRef(text)
@@ -150,10 +151,12 @@ function PromptCopyButton({ text, labels, compact = false, fallbackLabel }: { te
   }, [status, compact])
 
   const copyPrompt = async () => {
+    onCopyStart?.()
     const promptToCopy = text
     setStatus('copying')
     let timeout = 0
     try {
+      if (invalid) throw new Error('Invalid copy content')
       await Promise.race([
         navigator.clipboard.writeText(promptToCopy),
         new Promise<never>((_, reject) => { timeout = window.setTimeout(() => reject(new Error('Clipboard timeout')), 8000) }),
@@ -161,10 +164,11 @@ function PromptCopyButton({ text, labels, compact = false, fallbackLabel }: { te
       if (latestText.current === promptToCopy) {
         setCopiedText(promptToCopy)
         setStatus('copied')
+        onCopied?.()
       }
       else setStatus((current) => current === 'copying' ? 'idle' : current)
     } catch {
-      if (latestText.current === promptToCopy) setStatus('error')
+      if (latestText.current === promptToCopy) { setStatus('error'); onError?.() }
       else setStatus((current) => current === 'copying' ? 'idle' : current)
     } finally {
       window.clearTimeout(timeout)
@@ -172,7 +176,7 @@ function PromptCopyButton({ text, labels, compact = false, fallbackLabel }: { te
   }
 
   return <div className={`prompt-copy-control${compact ? ' prompt-copy-control-compact' : ''}`}>
-    <button type="button" className="prompt-copy-button" onClick={copyPrompt} onKeyDown={(event) => { if (event.key === 'Escape' && status === 'copied') setStatus('idle') }} disabled={status === 'copying'} aria-busy={status === 'copying'} aria-describedby={compact && status === 'copied' ? 'root-prompt-copied' : undefined}>
+    <button type="button" className="prompt-copy-button" onClick={copyPrompt} onKeyDown={(event) => { if (event.key === 'Escape' && status === 'copied') setStatus('idle') }} disabled={status === 'copying'} aria-busy={status === 'copying'} aria-describedby={compact && showFeedback && status === 'copied' ? feedbackId : undefined}>
       {compact
         ? <>
           <span>{labels.copyPrompt}</span>
@@ -185,16 +189,16 @@ function PromptCopyButton({ text, labels, compact = false, fallbackLabel }: { te
         : status === 'copied' ? labels.copiedPrompt : status === 'copying' ? labels.copyingPrompt : labels.copyPrompt}
     </button>
     <span className={status === 'error' || (status === 'copying' && compact) ? 'prompt-copy-status' : 'sr-only'} role="status" aria-live="polite">
-      {status === 'copied' ? `${labels.copiedPrompt}${compact ? `: ${copiedText}` : ''}` : status === 'copying' ? labels.copyingPrompt : status === 'error' ? labels.copyPromptError : ''}
+      {status === 'copied' ? labels.copiedPrompt : status === 'copying' ? labels.copyingPrompt : status === 'error' ? labels.copyPromptError : ''}
     </span>
-    {status === 'copied' && compact && <span id="root-prompt-copied" className="prompt-copy-tooltip" role="tooltip"><strong>{labels.copiedPrompt}</strong><span>{copiedText}</span></span>}
-    {status === 'error' && compact && <textarea className="prompt-copy-fallback" aria-label={fallbackLabel} readOnly rows={4} value={text} />}
+    {status === 'copied' && compact && showFeedback && <span id={feedbackId} className="prompt-copy-tooltip" role="tooltip"><strong>{labels.copiedPrompt}</strong><span>{copiedText.length > 240 ? `${copiedText.slice(0, 240)}…` : copiedText}</span></span>}
+    {status === 'error' && compact && !invalid && <textarea className="prompt-copy-fallback" aria-label={fallbackLabel} readOnly rows={4} value={text} />}
   </div>
 }
 
-function RootPrintPrompt({ prompt, labels }: { prompt: (typeof rootPromptCopy)[Language]; labels: PromptCopyLabels & { promptGroupLabel: string } }) {
+function RootPrintPrompt({ prompt, labels, showFeedback = true, onCopyStart }: { prompt: (typeof rootPromptCopy)[Language]; labels: PromptCopyLabels & { promptGroupLabel: string }; showFeedback?: boolean; onCopyStart?: () => void }) {
   return <div className="root-prompt" role="group" aria-label={labels.promptGroupLabel}>
-    <PromptCopyButton text={prompt.copyText} labels={{ ...labels, copyPrompt: prompt.copyLabel, copyPromptError: prompt.copyError }} compact fallbackLabel={prompt.copyFallbackLabel} />
+    <PromptCopyButton text={prompt.copyText} labels={{ ...labels, copyPrompt: prompt.copyLabel, copyPromptError: prompt.copyError }} compact showFeedback={showFeedback} onCopyStart={onCopyStart} fallbackLabel={prompt.copyFallbackLabel} />
   </div>
 }
 
@@ -458,6 +462,7 @@ function DocumentationApp() {
 }
 
 function ManuscriptApp() {
+  const [activeCopyFeedback, setActiveCopyFeedback] = useState<'link' | 'prompt' | null>(null)
   const [initialPrintLink] = useState<PrintLinkResult>(() => parsePrintLink(window.location.hash))
   const linkedSettings = initialPrintLink.kind === 'valid' ? initialPrintLink.payload : undefined
   const [languagePreference, setLanguagePreference] = useState<LanguagePreference>(initialLanguagePreference)
@@ -641,7 +646,7 @@ function ManuscriptApp() {
     }
   }
 
-  const copyDocumentLink = async () => {
+  const documentLink = useMemo(() => {
     try {
       const hash = createPrintLink({
         text, runs, direction, paper, orientation: paperOrientation, composition,
@@ -650,12 +655,12 @@ function ManuscriptApp() {
         ...(margin === 'custom' ? { customMarginPercentage } : {}),
         gridColor, autoParagraphIndent, showServiceMark,
       })
-      await navigator.clipboard.writeText(new URL(hash, window.location.href).href)
-      setStatus({ tone: 'success', message: language === 'ja' ? '本文と設定のリンクをコピーしました。' : 'Copied a link with text and settings.' })
-    } catch {
-      setStatus({ tone: 'error', message: language === 'ja' ? 'リンクをコピーできませんでした。本文の長さやクリップボードの権限を確認してください。' : 'Could not copy the link. Check text length and clipboard permissions.' })
-    }
-  }
+      return new URL(hash, window.location.href).href
+    } catch { return null }
+  }, [text, runs, direction, paper, paperOrientation, composition, fontFamily, fontSize, margin, customMarginPercentage, gridColor, autoParagraphIndent, showServiceMark])
+  const documentLinkLabel = language === 'ja' ? '本文と設定のリンクをコピー' : 'Copy text and settings link'
+  const documentLinkSuccess = language === 'ja' ? '本文と設定のリンクをコピーしました。' : 'Copied a link with text and settings.'
+  const documentLinkError = language === 'ja' ? 'リンクをコピーできませんでした。本文の長さや設定を確認し、下にリンクが表示されている場合は選択してコピーしてください。' : 'Could not copy the link. Check text length and settings, or select and copy the link below when available.'
 
   const print = () => {
     if (pending || !layoutSupported) return
@@ -683,8 +688,10 @@ function ManuscriptApp() {
       <a href="https://docs.genkou.snkisk.com/">{homeCopy.docsLink}</a>
       </div>
       <div className="home-actions">
-        <button type="button" className="share-document" onClick={copyDocumentLink}>{language === 'ja' ? '本文と設定のリンクをコピー' : 'Copy text and settings link'}</button>
-        <RootPrintPrompt key={language} prompt={rootPromptCopy[language]} labels={documentationCopy[language]} />
+        <div className="root-prompt" role="group" aria-label={documentLinkLabel}>
+          <PromptCopyButton showFeedback={activeCopyFeedback === 'link'} onCopyStart={() => setActiveCopyFeedback('link')} text={documentLink ?? ''} invalid={documentLink === null} labels={{ ...documentationCopy[language], copyPrompt: documentLinkLabel, copyPromptError: documentLinkError }} compact fallbackLabel={language === 'ja' ? 'コピー用の本文と設定リンク' : 'Text and settings link to copy'} onCopied={() => setStatus({ tone: 'success', message: documentLinkSuccess })} onError={() => setStatus({ tone: 'error', message: documentLinkError })} />
+        </div>
+        <RootPrintPrompt showFeedback={activeCopyFeedback === 'prompt'} onCopyStart={() => setActiveCopyFeedback('prompt')} key={language} prompt={rootPromptCopy[language]} labels={documentationCopy[language]} />
       </div>
     </section>
 
