@@ -19,6 +19,7 @@ describe('CDN brand asset contract', () => {
       expect(existsSync(root(`public/${name}`))).toBe(false)
     }
     const ico = readFileSync(root('public/favicon.ico'))
+    expect(createHash('sha256').update(ico).digest('hex')).toBe('ce0aba54f2982b3982885f5c61e87ad0e70f53207ba474c1f3cef6bc4fc08587')
     expect(ico.readUInt16LE(0)).toBe(0)
     expect(ico.readUInt16LE(2)).toBe(1)
     expect(ico.readUInt16LE(4)).toBe(3)
@@ -37,6 +38,18 @@ describe('CDN brand asset contract', () => {
     expect(html).toContain(assets['apple-touch-icon.png'].url)
     expect(html).toContain(assets['favicon-32.png'].url)
     expect(html).toContain(assets['favicon-48.png'].url)
+  })
+
+  it.each(['genkou.snkisk.com', 'docs.genkou.snkisk.com'])('preserves the generated ICO response on %s', async host => {
+    const ico = readFileSync(root('public/favicon.ico'))
+    const response = new Response(ico, { headers: { 'content-type': 'image/vnd.microsoft.icon', 'cache-control': 'public, max-age=3600' } })
+    const env = { ASSETS: { fetch: async request => {
+      expect(new URL(request.url).pathname).toBe('/favicon.ico')
+      return response
+    } } }
+    const result = await worker.fetch(new Request(`https://${host}/favicon.ico`), env)
+    expect(result).toBe(response)
+    expect(Buffer.from(await result.arrayBuffer())).toEqual(ico)
   })
 
   it.each(['https://genkou.snkisk.com/ja/', 'https://genkou.snkisk.com/en/', 'https://docs.genkou.snkisk.com/ja/', 'https://docs.genkou.snkisk.com/en/'])('serves consistent CDN social/icon references on %s', async url => {

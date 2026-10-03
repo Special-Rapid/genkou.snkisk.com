@@ -9,7 +9,11 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "prepare:favicon": "node scripts/prepare-favicon.mjs",
+    "prebuild": "npm run prepare:favicon",
+    "predev": "npm run prepare:favicon",
+    "pretest": "npm run prepare:favicon"
   },
   "dependencies": {
     "html2canvas": "^1.4.1",

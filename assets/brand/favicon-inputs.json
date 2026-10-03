@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "output": {
+    "path": "public/favicon.ico",
+    "bytes": 1808,
+    "sha256": "ce0aba54f2982b3982885f5c61e87ad0e70f53207ba474c1f3cef6bc4fc08587"
+  },
+  "inputs": [
+    {
+      "width": 16,
+      "bytes": 306,
+      "sha256": "ad951806af16aaf88f6f3abe2d8bda9d67feab495bd7806a4b1da8ed9010dc19",
+      "mime": "image/png",
+      "url": "https://images.snkisk.com/genkou.snkisk.com/c1f511ca-e96c-4f76-bacb-1ff611fec994.png"
+    },
+    {
+      "width": 32,
+      "bytes": 550,
+      "sha256": "a69582ab314c2c562f824f7abb2276b86b4c56339f2bedcd740e6e7f9eaf08f7",
+      "mime": "image/png",
+      "url": "https://images.snkisk.com/genkou.snkisk.com/b4127f99-7fc0-4a71-aaac-a12f89e79c82.png"
+    },
+    {
+      "width": 48,
+      "bytes": 898,
+      "sha256": "273883526f740f0be3a10378ea1c3ec8af0833b751cecf74c4e249d380138234",
+      "mime": "image/png",
+      "url": "https://images.snkisk.com/genkou.snkisk.com/1dbbd070-c6fe-4b2f-8fc7-4e79603f6f5e.png"
+    }
+  ]
+}
