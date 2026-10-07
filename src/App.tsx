@@ -683,9 +683,12 @@ function ManuscriptApp() {
         ...(margin === 'custom' ? { customMarginPercentage } : {}),
         gridColor, autoParagraphIndent, showServiceMark,
       })
-      return new URL(hash, window.location.href).href
+      const url = new URL(window.location.href)
+      url.pathname = `/${language}/`
+      url.hash = hash
+      return url.href
     } catch { return null }
-  }, [text, runs, direction, paper, paperOrientation, composition, fontFamily, fontSize, margin, customMarginPercentage, gridColor, autoParagraphIndent, showServiceMark])
+  }, [language, text, runs, direction, paper, paperOrientation, composition, fontFamily, fontSize, margin, customMarginPercentage, gridColor, autoParagraphIndent, showServiceMark])
   const documentLinkLabel = language === 'ja' ? '本文と設定のリンクをコピー' : 'Copy text and settings link'
   const documentLinkSuccess = language === 'ja' ? '本文と設定のリンクをコピーしました。' : 'Copied a link with text and settings.'
   const documentLinkError = language === 'ja' ? 'リンクをコピーできませんでした。本文の長さや設定を確認し、下にリンクが表示されている場合は選択してコピーしてください。' : 'Could not copy the link. Check text length and settings, or select and copy the link below when available.'
