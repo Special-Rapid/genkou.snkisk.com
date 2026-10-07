@@ -15,20 +15,6 @@ const localizedDocsUrl = (language: Language) => `${docsUrl}${language}/`
 
 const localizedHomeUrl = (language: Language) => `${homeUrl}${language}/`
 
-function preferredLanguage(header: string | null): Language {
-  const locales = (header ?? '').split(',').map((entry, index) => {
-    const [tag, ...parameters] = entry.trim().toLowerCase().split(';')
-    const quality = parameters.find((part) => part.trim().startsWith('q='))
-    return { tag, quality: quality ? Number(quality.trim().slice(2)) : 1, index }
-  }).filter((locale) => Number.isFinite(locale.quality) && locale.quality > 0 && locale.quality <= 1)
-  locales.sort((a, b) => b.quality - a.quality || a.index - b.index)
-  for (const { tag } of locales) {
-    if (tag === 'ja' || tag.startsWith('ja-')) return 'ja'
-    if (tag === 'en' || tag.startsWith('en-')) return 'en'
-  }
-  return 'ja'
-}
-
 function escapeAttribute(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')
 }
@@ -88,10 +74,8 @@ export function renderHomeHtml(html: string, language: Language): string {
   result = replaceMeta(result, 'name', 'twitter:description', content.description)
   result = result.replace(/<link\b(?=[^>]*\brel=(['"])canonical\1)[^>]*>/i, `<link rel="canonical" href="${pageUrl}" />`)
   result = result.replace('</head>', `<link rel="alternate" hreflang="ja" href="${localizedHomeUrl('ja')}" /><link rel="alternate" hreflang="en" href="${localizedHomeUrl('en')}" /><link rel="alternate" hreflang="x-default" href="${homeUrl}" /></head>`)
-  result = result.replace(/<script\b(?=[^>]*\bid=(['"])website-structured-data\1)[^>]*>[\s\S]*?<\/script>/i, `<script type="application/ld+json" id="website-structured-data">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: '原稿小箱', alternateName: 'genkou.snkisk.com', url: pageUrl })}</script>`)
-  if (language === 'en') {
-    result = result.replace(/<main\b(?=[^>]*\bid=(['"])seo-fallback\1)[^>]*>[\s\S]*?<\/main>/i, `<main id="seo-fallback" class="seo-fallback"><h1>${content.heading}</h1><p>${content.introduction}</p><p><a href="${localizedDocsUrl(language)}">${content.docsLink}</a></p><p><a href="${homeUrl}llms.txt">AI print-link specification</a></p><noscript>${content.javascriptRequired}</noscript></main>`)
-  }
+  result = result.replace(/<script\b(?=[^>]*\bid=(['"])website-structured-data\1)[^>]*>[\s\S]*?<\/script>/i, `<script type="application/ld+json" id="website-structured-data">${JSON.stringify({ '@context': 'https://schema.org', '@type': 'WebSite', name: '原稿小箱', alternateName: 'genkou.snkisk.com', url: homeUrl })}</script>`)
+  result = result.replace(/<main\b(?=[^>]*\bid=(['"])seo-fallback\1)[^>]*>[\s\S]*?<\/main>/i, `<main id="seo-fallback" class="seo-fallback"><h1>${content.heading}</h1><p>${content.introduction}</p><p><a href="${localizedDocsUrl(language)}">${content.docsLink}</a></p><p><a href="${homeUrl}llms.txt">${language === 'ja' ? 'AI向け印刷リンク仕様' : 'AI print-link specification'}</a></p><noscript>${content.javascriptRequired}</noscript></main>`)
   return result
 }
 
@@ -118,7 +102,7 @@ export default {
     const isDocsPage = (isDocumentationHost && (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/ja/' || url.pathname === '/en/'))
       || (isRootHost && url.pathname === '/docs')
     const isRootPage = isRootHost && (url.pathname === '/' || url.pathname === '/ja/' || url.pathname === '/en/')
-    const homeLanguage: Language = url.pathname === '/ja/' ? 'ja' : url.pathname === '/en/' ? 'en' : preferredLanguage(request.headers.get('accept-language'))
+    const homeLanguage: Language = url.pathname === '/en/' ? 'en' : 'ja'
 
     let assetPath = url.pathname
     if (isDocsPage) assetPath = '/'
@@ -137,7 +121,6 @@ export default {
     if (!isRootPage || request.method !== 'GET') return response
     const result = withUncompressedHtml(response, renderHomeHtml(await response.text(), homeLanguage))
     result.headers.append('Link', `<${homeUrl}llms.txt>; rel="alternate"; type="text/plain"; title*=UTF-8''${encodeURIComponent('原稿小箱 AI印刷リンク仕様')}`)
-    if (url.pathname === '/') result.headers.set('Vary', 'Accept-Language')
     return result
   },
 }

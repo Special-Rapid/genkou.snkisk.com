@@ -25,7 +25,7 @@ describe('WorkerのAI仕様と文書host', () => {
     expect(response.headers.get('link')).toContain('https://genkou.snkisk.com/llms.txt')
     expect(response.headers.get('link')).toContain('rel="alternate"')
     expect(response.headers.get('link')).toContain(encodeURIComponent('原稿小箱 AI印刷リンク仕様'))
-    expect(response.headers.get('vary')).toBe('Accept-Language')
+    expect(response.headers.get('vary')).toBeNull()
     const html = await response.text()
     expect(html).toContain('<html lang="ja" data-initial-language="ja">')
     expect(html).toContain('<link rel="canonical" href="https://genkou.snkisk.com/ja/" />')
@@ -46,21 +46,24 @@ describe('WorkerのAI仕様と文書host', () => {
     expect(enHtml).toContain('<title>原稿小箱 | Japanese manuscript paper, ready to print</title>')
     expect(enHtml).toContain('Print Japanese manuscript paper, simply')
     expect(enHtml).toContain('content="原稿小箱 — Create and print Japanese manuscript paper"')
-    expect(enHtml).toContain('"url":"https://genkou.snkisk.com/en/"')
+    expect(enHtml).toContain('"url":"https://genkou.snkisk.com/"')
     expect(enHtml).toContain('https://genkou.snkisk.com/en/')
     expect(enHtml).toContain('hreflang="ja"')
     expect(enHtml).toContain('hreflang="en"')
     expect(enHtml).not.toContain('root fallback')
   })
 
-  it('rootは受け入れ言語の優先度を守り、英語ブラウザには英語HTMLを返す', async () => {
+  it.each(['en-US,en;q=0.9', 'ja', 'fr', 'ja;q=0.7,en-US;q=0.9'])('rootの初期HTMLはAccept-Language %sでも日本語の正規URLに固定する', async (header) => {
     const { env } = withAssets()
-    const response = await worker.fetch(new Request('https://genkou.snkisk.com/', { headers: { 'accept-language': 'ja;q=0.7,en-US;q=0.9' } }), env)
+    const response = await worker.fetch(new Request('https://genkou.snkisk.com/?paper=b5', { headers: { 'accept-language': header } }), env)
     const html = await response.text()
-
-    expect(html).toContain('<html lang="en" data-initial-language="en">')
-    expect(html).toContain('<title>原稿小箱 | Japanese manuscript paper, ready to print</title>')
-    expect(html).toContain('content="https://genkou.snkisk.com/en/"')
+    expect(html).toContain('<html lang="ja" data-initial-language="ja">')
+    expect(html).toContain('<link rel="canonical" href="https://genkou.snkisk.com/ja/" />')
+    expect(html).toContain('property="og:url" content="https://genkou.snkisk.com/ja/"')
+    expect(html).toContain('"url":"https://genkou.snkisk.com/"')
+    expect(html).toContain('href="https://docs.genkou.snkisk.com/ja/"')
+    expect(html).toContain('hreflang="x-default" href="https://genkou.snkisk.com/"')
+    expect(response.headers.get('vary')).toBeNull()
   })
 
   it('末尾スラッシュなしの言語別URLを正規のURLへ揃える', async () => {

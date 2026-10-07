@@ -69,4 +69,4 @@ Cloudflare Workers Static Assets を使用しています。`wrangler.jsonc` の
 
 ## 公開URL
 
-正規URLは `https://genkou.snkisk.com/`、使い方ページは `https://docs.genkou.snkisk.com/` です。Workerのカスタムドメインはこの2ホストを使用します。公開後は両ホストのHTTPS、home/docs、`llms.txt`、robots/sitemap、静的アセット、本文入り印刷リンクを確認します。
+検索用の正規URLは `https://genkou.snkisk.com/ja/` と `https://genkou.snkisk.com/en/`（`https://genkou.snkisk.com/` は本文入り印刷リンクの互換入口）、使い方ページは `https://docs.genkou.snkisk.com/` です。Workerのカスタムドメインはこの2ホストを使用します。公開後は両ホストのHTTPS、home/docs、`llms.txt`、robots/sitemap、静的アセット、本文入り印刷リンクを確認します。
