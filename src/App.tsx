@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useId, useMemo, useRef, useState } from 'react'
-import { copy, documentationCopy, homepageCopy, rootPromptCopy, type Labels, type Language } from './lib/copy'
+import { copy, documentationCopy, homepageCopy, paperServiceMark, rootPromptCopy, type Labels, type Language } from './lib/copy'
 import { manuscriptCharacters, manuscriptDisplayCells, indexedManuscriptPages, pageTotal, type Direction, type IndexedCell } from './lib/layout'
 import { gridMetricsForFrame, type GridMetrics } from './lib/grid-metrics'
 import { createPrintLink, parsePrintLink, type PrintLinkPayload, type PrintLinkResult } from './lib/print-link'
@@ -374,7 +374,7 @@ function ManuscriptPage({ runs, direction, paper, paperOrientation, composition,
             : <div className="manuscript-grid" aria-label={hasText ? `${labels.sourceCount} ${cells.filter(Boolean).length}${labels.sourceSuffix}` : labels.blank}>{displayCells.map(renderCell)}</div>}
       </div>
       {!hasText && <p className="empty-paper">{labels.blank}</p>}
-      {canShowServiceMark && <span className="service-mark" aria-hidden="true">{labels.serviceName}</span>}
+      {canShowServiceMark && <span className="service-mark" aria-hidden="true">{paperServiceMark}</span>}
     </div>
     <div className="page-footer">{labels.page} {page} / {total}</div>
   </section>
