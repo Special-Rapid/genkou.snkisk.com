@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { manuscriptCharacters, manuscriptDisplayCells, manuscriptPages, pageTotal } from './layout'
+import { indexedManuscriptPages, manuscriptCharacters, manuscriptDisplayCells, manuscriptPages, pageTotal } from './layout'
 
 describe('原稿用紙の計算', () => {
   const composition = { characters: 2, lines: 2 }
@@ -47,15 +47,44 @@ describe('原稿用紙の計算', () => {
       .toEqual([null, 'あ', null, null, null, null])
   })
 
-  it('単一改行・連続改行・行頭空白を同じ1マス字下げの段落境界として畳む', () => {
-    const paragraphComposition = { characters: 3, lines: 3 }
-    const expected = manuscriptPages('あ\nい', paragraphComposition, { autoParagraphIndent: true })
+  it('自動字下げでも明示した行頭・途中の半角全角空白とタブを保持する', () => {
+    const text = '  A B\n　　C　D\n\tE'
+    for (const autoParagraphIndent of [false, true]) {
+      const pages = indexedManuscriptPages(text, { characters: 8, lines: 4 }, { autoParagraphIndent })
+      expect(pages.flat().filter(cell => cell !== null).map(cell => cell.character).join(''))
+        .toBe(text.replaceAll('\n', ''))
+      expect(pages[0].slice(0, 5).map(cell => cell?.character ?? null)).toEqual([' ', ' ', 'A', ' ', 'B'])
+      expect(pages[0].slice(8, 13).map(cell => cell?.character ?? null)).toEqual(['　', '　', 'C', '　', 'D'])
+      expect(pages[0].slice(16, 18).map(cell => cell?.character ?? null)).toEqual(['\t', 'E'])
+    }
+  })
 
-    expect(expected[0]).toEqual([null, 'あ', null, null, 'い', null, null, null, null])
-    expect(manuscriptPages('あ\n\nい', paragraphComposition, { autoParagraphIndent: true })).toEqual(expected)
-    expect(manuscriptPages('あ\n　い', paragraphComposition, { autoParagraphIndent: true })).toEqual(expected)
-    expect(manuscriptPages('あ\n  い', paragraphComposition, { autoParagraphIndent: true })).toEqual(expected)
-    expect(manuscriptPages('あ\n\tい', paragraphComposition, { autoParagraphIndent: true })).toEqual(expected)
+  it('自動字下げでも先頭・連続の空行と空白だけの段落を保持する', () => {
+    expect(manuscriptPages('\nあ\n\nい', { characters: 3, lines: 4 }, { autoParagraphIndent: true })[0])
+      .toEqual([null, null, null, null, 'あ', null, null, null, null, null, 'い', null])
+    expect(manuscriptPages(' 　\t', { characters: 3, lines: 2 }, { autoParagraphIndent: true })[0])
+      .toEqual([' ', '　', '\t', null, null, null])
+  })
+
+  it('自動字下げでも改ページをまたぐ空行と明示した空白を保持する', () => {
+    const pages = manuscriptPages('あい\n\n う', { characters: 3, lines: 2 }, { autoParagraphIndent: true })
+    expect(pages[0]).toEqual([null, 'あ', 'い', null, null, null])
+    expect(pages[1]).toEqual([' ', 'う', null, null, null, null])
+  })
+
+  it('改行直前が行末でも次段落は1マス字下げし空行を増やさない', () => {
+    expect(manuscriptPages('あい\nう', { characters: 3, lines: 2 }, { autoParagraphIndent: true })[0])
+      .toEqual([null, 'あ', 'い', null, 'う', null])
+  })
+
+  it('空白保持と字下げのON/OFFにかかわらずUTF-16の本文offsetを維持する', () => {
+    const text = '  A😀\r\n\r\n　B é\n\tC'
+    for (const autoParagraphIndent of [false, true]) {
+      const cells = indexedManuscriptPages(text, { characters: 4, lines: 2 }, { autoParagraphIndent }).flat().filter(cell => cell !== null)
+      expect(cells.map(cell => cell.character).join('')).toBe(text.replaceAll(/\r\n?|\n/g, ''))
+      for (const cell of cells) expect(text.slice(cell.sourceStart, cell.sourceStart + cell.character.length)).toBe(cell.character)
+      expect(cells.find(cell => cell.character === 'B')?.sourceStart).toBe(10)
+    }
   })
 
   it('段落の自動適用をオフにすると従来の改行組版を維持する', () => {
