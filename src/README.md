@@ -12,7 +12,7 @@
 
 本文のLatin文字・十進数字を選択し「標準／正立／横倒し」で1文字1マスの向きを指定します。日本語・空白・句読点・改行は対象外です。選択なし・対象なし・IME変換中は操作できません。横書きではデータを保持し表示だけ適用を止めます。
 
-`text-orientation.ts`はUTF-16半開区間の非重複runsを管理します。textareaへ渡す前にCRLF/CRをLFへ統一してrunsを移動し、indexed layoutが元本文offsetを段落整形／改ページ後にも保持します。新しい文字は標準で、範囲内挿入は既存runを分割します。既存の自動段落字下げ・空白整形仕様は変更していません（空白の報告はIssue #15）。
+`text-orientation.ts`はUTF-16半開区間の非重複runsを管理します。textareaへ渡す前にCRLF/CRをLFへ統一してrunsを移動し、indexed layoutが元本文offsetを段落整形／改ページ後にも保持します。新しい文字は標準で、範囲内挿入は既存runを分割します。Issue #15で自動字下げは空白のない段落だけに適用し、手入力・貼り付けの行頭/途中の半角空白・全角空白・タブと空行を保持するよう修正しました。OFFでは字下げの空セルを補わず入力どおりに組みます。どちらも本文やUTF-16 offsetは変更しません。
 
 本文とrunsを同じ履歴へ保存し、Ctrl/Cmd+Z、Ctrl+Y／Cmd+Shift+Z、beforeinput historyUndo/Redoで復元します。履歴上限は100操作で、IMEの一回の確定は一操作です。通常の各入力・削除・書式変更は一操作として扱います。保存はversion付き`genkou:document`、旧`kantan:source-text`から移行し、本文のみの互換保存も続けます。
 

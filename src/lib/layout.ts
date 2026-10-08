@@ -10,7 +10,7 @@ export type IndexedCharacter = { character: string; sourceStart: number }
 export type IndexedCell = IndexedCharacter | null
 
 export interface ManuscriptLayoutOptions {
-  /** 段落境界を1マス下げて組む。入力本文そのものは変更しない。 */
+  /** 行頭空白のない段落だけ1マス下げる。入力の空白・空行は保持する。 */
   autoParagraphIndent?: boolean
 }
 
@@ -37,12 +37,13 @@ export const pageCapacity = ({ characters, lines }: Composition) => characters *
  * 改行は次の行を始める指示として扱い、通常の空白は原稿用紙の一文字として残す。
  * 空セルも返すため、段落の改行をプレビューとPDFで同じ位置に再現できる。
  */
-const legacyManuscriptPages = (tokens: IndexedCharacter[], composition: Composition): IndexedCell[][] => {
+const layoutManuscriptPages = (tokens: IndexedCharacter[], composition: Composition, autoParagraphIndent: boolean): IndexedCell[][] => {
   const capacity = pageCapacity(composition)
   const pages: IndexedCell[][] = []
   let cells: IndexedCell[] = Array(capacity).fill(null)
   let cursor = 0
   let previousWasNewline = false
+  let paragraphStart = true
 
   const finishPage = () => {
     pages.push(cells)
@@ -52,6 +53,7 @@ const legacyManuscriptPages = (tokens: IndexedCharacter[], composition: Composit
 
   for (const token of tokens) {
     if (token.character === '\n') {
+      paragraphStart = true
       if (cursor === capacity) {
         finishPage()
         if (previousWasNewline) cursor = composition.characters
@@ -66,6 +68,12 @@ const legacyManuscriptPages = (tokens: IndexedCharacter[], composition: Composit
     }
 
     if (cursor === capacity) finishPage()
+    // 明示した字下げを増減せず、空白がない段落にだけ空セルを補う。
+    if (paragraphStart && autoParagraphIndent && !/^[ \t　]$/.test(token.character)) {
+      cursor += 1
+      if (cursor === capacity) finishPage()
+    }
+    paragraphStart = false
     cells[cursor] = token
     cursor += 1
     previousWasNewline = false
@@ -75,55 +83,9 @@ const legacyManuscriptPages = (tokens: IndexedCharacter[], composition: Composit
   return pages
 }
 
-/**
- * 改行の数や行頭空白の有無にかかわらず、貼り付け元の段落を同じ見た目にそろえる。
- * 連続改行と段落先頭の空白を一つの境界へ畳むため、字下げは必ず一マスだけになる。
- */
-const paragraphIndentedPages = (tokens: IndexedCharacter[], composition: Composition): IndexedCell[][] => {
-  const capacity = pageCapacity(composition)
-  const pages: IndexedCell[][] = []
-  let cells: IndexedCell[] = Array(capacity).fill(null)
-  let cursor = 0
-  const paragraphs: IndexedCharacter[][] = []
-  let paragraph: IndexedCharacter[] = []
-  for (const token of tokens) {
-    if (token.character === '\n') {
-      if (paragraph.length) paragraphs.push(paragraph)
-      paragraph = []
-    } else if (paragraph.length || !/^[ \t　]$/.test(token.character)) paragraph.push(token)
-  }
-  if (paragraph.length) paragraphs.push(paragraph)
-
-  const finishPage = () => {
-    pages.push(cells)
-    cells = Array(capacity).fill(null)
-    cursor = 0
-  }
-
-  const startParagraph = () => {
-    if (cursor % composition.characters !== 0) {
-      cursor = Math.ceil(cursor / composition.characters) * composition.characters
-    }
-    if (cursor === capacity) finishPage()
-    cursor += 1
-  }
-
-  for (const paragraph of paragraphs) {
-    startParagraph()
-    for (const character of paragraph) {
-      if (cursor === capacity) finishPage()
-      cells[cursor] = character
-      cursor += 1
-    }
-  }
-
-  pages.push(cells)
-  return pages
-}
-
 export const indexedManuscriptPages = (text: string, composition: Composition, options: ManuscriptLayoutOptions = {}): IndexedCell[][] => {
   const tokens = Array.from(text.matchAll(/\r\n|\r|[\s\S]/gu), match => ({ character: /[\r\n]/.test(match[0]) ? '\n' : match[0], sourceStart: match.index }))
-  return options.autoParagraphIndent ? paragraphIndentedPages(tokens, composition) : legacyManuscriptPages(tokens, composition)
+  return layoutManuscriptPages(tokens, composition, options.autoParagraphIndent ?? false)
 }
 
 export const manuscriptPages = (text: string, composition: Composition, options: ManuscriptLayoutOptions = {}): ManuscriptCell[][] =>
