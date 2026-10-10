@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "generate:brand-assets": "node scripts/generate-brand-assets.mjs",
+    "generate:brand-assets": "node --experimental-strip-types scripts/generate-brand-assets.mts",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",

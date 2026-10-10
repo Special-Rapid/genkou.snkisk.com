@@ -16,14 +16,14 @@ const darkIconSourceText = iconSourceText.replace('fill="#f4f5f6"', 'fill="#1515
 if (darkIconSourceText === iconSourceText) throw new Error('Expected both icon background colors in assets/brand/brand-icon.svg.')
 await writeFile(resolve(outputDirectory, 'brand-icon-dark.svg'), darkIconSourceText)
 
-async function renderIcon(size) {
+async function renderIcon(size: number) {
   return sharp(iconSource)
     .resize(size, size, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png({ compressionLevel: 9 })
     .toBuffer()
 }
 
-function encodeIco(pngImages) {
+function encodeIco(pngImages: ReadonlyArray<{ size: number; data: Buffer }>) {
   const header = Buffer.alloc(6 + pngImages.length * 16)
   header.writeUInt16LE(0, 0)
   header.writeUInt16LE(1, 2)
@@ -47,15 +47,15 @@ function encodeIco(pngImages) {
 }
 
 const sizes = [16, 32, 48, 180, 192, 512]
-const images = new Map()
+const images = new Map<number, Buffer>()
 for (const size of sizes) images.set(size, await renderIcon(size))
 
-await writeFile(resolve(outputDirectory, 'favicon-32.png'), images.get(32))
-await writeFile(resolve(outputDirectory, 'favicon-48.png'), images.get(48))
-await writeFile(resolve(outputDirectory, 'apple-touch-icon.png'), images.get(180))
-await writeFile(resolve(outputDirectory, 'icon-192.png'), images.get(192))
-await writeFile(resolve(outputDirectory, 'icon-512.png'), images.get(512))
-await writeFile(resolve(outputDirectory, 'favicon.ico'), encodeIco([16, 32, 48].map((size) => ({ size, data: images.get(size) }))))
+await writeFile(resolve(outputDirectory, 'favicon-32.png'), images.get(32)!)
+await writeFile(resolve(outputDirectory, 'favicon-48.png'), images.get(48)!)
+await writeFile(resolve(outputDirectory, 'apple-touch-icon.png'), images.get(180)!)
+await writeFile(resolve(outputDirectory, 'icon-192.png'), images.get(192)!)
+await writeFile(resolve(outputDirectory, 'icon-512.png'), images.get(512)!)
+await writeFile(resolve(outputDirectory, 'favicon.ico'), encodeIco([16, 32, 48].map((size) => ({ size, data: images.get(size)! }))))
 
 const ogBase = await sharp(ogSource).png().toBuffer()
 const ogIcon = await sharp(iconSource).resize(96, 96, { fit: 'contain' }).png().toBuffer()
