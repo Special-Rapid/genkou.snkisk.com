@@ -13,5 +13,10 @@
     "strict": true,
     "erasableSyntaxOnly": true
   },
-  "include": ["vite.config.ts", "scripts/generate-brand-assets.mts"]
+  "include": [
+    "vite.config.ts",
+    "scripts/generate-brand-assets.mts",
+    "scripts/prepare-favicon.mts",
+    "scripts/prepare-favicon.test.ts"
+  ]
 }
