@@ -3,6 +3,7 @@
   "name": "kantan-snkisk-com",
   "main": "src/worker.ts",
   "compatibility_date": "2026-09-11",
+  "previews": {},
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
