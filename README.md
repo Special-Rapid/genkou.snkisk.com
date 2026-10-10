@@ -15,6 +15,8 @@
 
 ## ブランドアセット
 
+生成・favicon準備の型検査と実行条件は [`scripts/README.md`](scripts/README.md) を参照してください。
+
 `assets/brand/brand-icon.svg` がロゴの生成正本、`assets/brand/og-image.svg` がOG背景・レイアウトの生成正本です。ブラウザへ配信する10ファイルはR2の公開CDN `images.snkisk.com` へ移し、URL・MIME・bytes・SHA256を `assets/brand/cdn-assets.json` で追跡します。headerのlight/darkマーク、SVG/PNG favicon、Apple touch icon、OG/Twitter PNG、manifestの192/512アイコンがCDNを参照します。OG SVG/WebPも配信用コピーをpublicから外していますが、現画面の参照は従来通りPNGです。
 
 ```bash

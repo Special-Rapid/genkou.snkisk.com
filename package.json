@@ -10,7 +10,7 @@
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
     "deploy": "npm run build && wrangler deploy",
-    "prepare:favicon": "node scripts/prepare-favicon.mjs",
+    "prepare:favicon": "node --experimental-strip-types scripts/prepare-favicon.mts",
     "prebuild": "npm run prepare:favicon",
     "predev": "npm run prepare:favicon",
     "pretest": "npm run prepare:favicon"

@@ -32,4 +32,4 @@
 
 `lib/brand-assets.test.ts` は既存の `tsconfig.app.json` の `src` 対象に含まれ、`npm run typecheck` でstrict検査されます。JSON素材台帳のキーとWorkerの `Env` を使い、CDN参照・favicon応答・製品と使い方ページの両ホストの契約を `npx vitest run src/lib/brand-assets.test.ts` で確認します。faviconが未生成の場合は先に `npm run prepare:favicon` を実行します。
 
-この単位はテストのみの移行です。`scripts/` の生成・取得scriptとfavicon testのJS移行はIssue #35の残作業です。
+`scripts/` の生成・取得処理とfavicon testもNode用strict型検査の対象です。実行条件と確認手順は [`scripts/README.md`](../scripts/README.md) を参照してください。
