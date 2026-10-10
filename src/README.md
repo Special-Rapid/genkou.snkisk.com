@@ -26,3 +26,10 @@
 ## 紙面のサービス表記（Issue #22）
 
 プレビュー・印刷・PDFは同じ `ManuscriptPage` の紙面を使い、左下の表記は `paperServiceMark` の `genkou.snkisk.com` で共通です。10%以上の余白で表示し、それ未満の余白では既存どおり罫線との重なりを避けて非表示にします。表示のON/OFF、本文、PDF名、ヘッダーやSEOのサービス名はそのまま維持します。
+
+
+## ブランド素材の契約テストの型検査（Issue #35）
+
+`lib/brand-assets.test.ts` は既存の `tsconfig.app.json` の `src` 対象に含まれ、`npm run typecheck` でstrict検査されます。JSON素材台帳のキーとWorkerの `Env` を使い、CDN参照・favicon応答・製品と使い方ページの両ホストの契約を `npx vitest run src/lib/brand-assets.test.ts` で確認します。faviconが未生成の場合は先に `npm run prepare:favicon` を実行します。
+
+この単位はテストのみの移行です。`scripts/` の生成・取得scriptとfavicon testのJS移行はIssue #35の残作業です。
