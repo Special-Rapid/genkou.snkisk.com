@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync, existsSync } from 'node:fs'
 import { createHash } from 'node:crypto'
 import assets from '../../assets/brand/cdn-assets.json'
-import worker from '../worker'
+import worker, { type Env } from '../worker'
 
-const root = (path) => new URL(`../../${path}`, import.meta.url)
+const root = (path: string) => new URL(`../../${path}`, import.meta.url)
 const html = readFileSync(root('index.html'), 'utf8')
 
 describe('CDN brand asset contract', () => {
   it('preserves editable sources without publishing duplicate distribution images', () => {
-    for (const name of ['brand-icon.svg', 'og-image.svg']) {
+    for (const name of ['brand-icon.svg', 'og-image.svg'] as const) {
       const source = readFileSync(root(`assets/brand/${name}`))
       expect(createHash('sha256').update(source).digest('hex')).toBe(assets[name].sha256)
     }
@@ -43,7 +43,7 @@ describe('CDN brand asset contract', () => {
   it.each(['genkou.snkisk.com', 'docs.genkou.snkisk.com'])('preserves the generated ICO response on %s', async host => {
     const ico = readFileSync(root('public/favicon.ico'))
     const response = new Response(ico, { headers: { 'content-type': 'image/vnd.microsoft.icon', 'cache-control': 'public, max-age=3600' } })
-    const env = { ASSETS: { fetch: async request => {
+    const env: Env = { ASSETS: { fetch: async request => {
       expect(new URL(request.url).pathname).toBe('/favicon.ico')
       return response
     } } }
@@ -53,7 +53,7 @@ describe('CDN brand asset contract', () => {
   })
 
   it.each(['https://genkou.snkisk.com/ja/', 'https://genkou.snkisk.com/en/', 'https://docs.genkou.snkisk.com/ja/', 'https://docs.genkou.snkisk.com/en/'])('serves consistent CDN social/icon references on %s', async url => {
-    const env = {ASSETS:{fetch:async()=>new Response(html,{headers:{'content-type':'text/html'}})}}
+    const env: Env = {ASSETS:{fetch:async()=>new Response(html,{headers:{'content-type':'text/html'}})}}
     const body = await (await worker.fetch(new Request(url), env)).text()
     expect(body).toContain(`<meta property="og:image" content="${assets['og-image.png'].url}"`)
     expect(body).toContain(`<meta name="twitter:image" content="${assets['og-image.png'].url}"`)
