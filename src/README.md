@@ -1,35 +1,33 @@
-# 画面の状態とAI依頼文
+# UI state and AI writing prompts
 
-ホームでは `RootPrintPrompt` が短いコピーボタンを表示し、`lib/copy.ts` の `rootPromptCopy` をクリップボードへ直接コピーします。題材例と文章作成の指示はホームの表示・コピー内容に含めません。成功時はコピーした本文をボタン直下のツールチップに6.5秒間表示し、Escapeでも閉じられます。失敗時は同じ本文を選択できる入力欄とエラーを表示します。使い方ページの題材入り例文はそのまま残します。仕様は [Issue #11](https://github.com/Special-Rapid/kantan.snkisk.com/issues/11) に記録しています。
+On the home page, `RootPrintPrompt` displays a compact copy button and copies `rootPromptCopy` from `lib/copy.ts` directly to the clipboard. The home page and copied text do not include a topic example or instructions for composing the text. On success, a tooltip below the button shows the copied text for 6.5 seconds; Escape also closes it. On failure, the same text appears in a selectable field with an error. The guide retains its example with a specified topic. The specification is recorded in [Issue #11](https://github.com/Special-Rapid/kantan.snkisk.com/issues/11).
 
-画面は日本語と英語に対応し、明示言語URLを除く未保存時はOSの言語から完全一致、基底言語一致、日本語の順で選びます。「システム」選択中はOSの言語変更にも追従します。画面内で言語を選ぶと `kantan:language-preference` と手動選択の印 `kantan:language-manual` に保存します。旧版が自動保存した `system` は手動選択とみなさず、言語別URLの初期言語を優先します。既存の `kantan:language` も移行時に読みます。対応言語は左から右へ読む言語のみで、RTLは対象外です。
+The UI supports Japanese and English. Except on explicit language URLs, when no preference has been saved, it resolves the OS language by exact match, then base-language match, then Japanese fallback. While “System” (「システム」) is selected, it follows OS language changes. Selecting a language in the UI saves it as `kantan:language-preference` and records a manual choice in `kantan:language-manual`. A `system` value automatically saved by an older version is not treated as a manual choice; the language URL's initial language takes priority. Migration also reads the legacy `kantan:language` value. Only left-to-right languages are supported; RTL is out of scope.
 
-検索用ホームは `/ja/` と `/en/` に分け、初期HTMLの本文・title・description・canonical・OG情報をそれぞれの言語へ揃えます。`/` は本文入り印刷リンクとの互換入口として維持し、Accept-Languageによらず日本語HTMLと `/ja/` canonicalを返します。x-defaultはこの入口です。WebSiteのURLはサイト全体を示すrootに固定します。言語別URLを直接開いた場合はURLの言語を優先し、保存済みの手動選択を書き換えません。rootでは保存済みの手動選択を復元し、未保存時のJS表示はOS言語を使い、対応する言語URLへ同期します。サーバーHTMLは日本語で安定し、JSによる英語表示は `/en/` URL上で行います。言語切替は再読み込みせず、本文・メタ情報とURLをhistory.replaceStateで同期します。query・印刷fragment・入力・選択を保持します。URLからの初期選択は保存しません。使い方へのリンクとホームに戻るリンクは表示言語のURLへ向けます。経緯は [Issue #1](https://github.com/Special-Rapid/genkou.snkisk.com/issues/1) を参照してください。
+The search entry pages are `/ja/` and `/en/`, each with matching initial HTML body, title, description, canonical URL, and OG metadata. `/` remains the compatibility entry point for text-filled print links and returns Japanese HTML with a `/ja/` canonical URL regardless of Accept-Language. It is also the x-default entry. The WebSite URL stays at the site root. Opening a language URL directly prioritizes that URL's language without overwriting a saved manual choice. At the root, a saved manual choice is restored; without one, the JavaScript UI uses the OS language and synchronizes to the corresponding language URL. Server HTML remains consistently Japanese; JavaScript renders English on the `/en/` URL. Language changes synchronize the body, metadata, and URL with history.replaceState without reloading. They preserve the query, print fragment, input, and selection. Initial selection from a URL is not saved. Links to the guide and back home use the displayed language's URL. See [Issue #1](https://github.com/Special-Rapid/genkou.snkisk.com/issues/1) for the background.
 
-テーマは System / Light / Dark に対応し、`kantan:theme` に保存します。SystemではOSの外観変更に追従し、選択結果を `data-theme`、CSSの `color-scheme`、ブラウザの `theme-color` に反映します。ブラウザの動的アクセント色を取得する公開APIは利用していないため、配色はCSSの意味別変数で管理します。言語・テーマの切替は再読み込みせず、入力や現在の画面を維持します。
+Themes support System / Light / Dark and are saved in `kantan:theme`. System follows OS appearance changes. The resolved choice updates `data-theme`, CSS `color-scheme`, and the browser's `theme-color`. No public API is used to obtain the browser's dynamic accent color, so colors are managed through semantic CSS variables. Language and theme changes preserve input and the current view without reloading.
 
-## 選択した英数字の向き（Issue #16）
+## Orientation of selected Latin letters and numbers (Issue #16)
 
-本文のLatin文字・十進数字を選択し「標準／正立／横倒し」で1文字1マスの向きを指定します。日本語・空白・句読点・改行は対象外です。選択なし・対象なし・IME変換中は操作できません。横書きではデータを保持し表示だけ適用を止めます。
+Select Latin letters or decimal digits in the text and choose Standard / Upright / Sideways (「標準／正立／横倒し」) to set the orientation of one character per manuscript cell. Japanese characters, whitespace, punctuation, and newlines are excluded. The controls are unavailable with no selection, no eligible characters, or an active IME composition. Horizontal writing retains the data but suspends its visual effect.
 
-`text-orientation.ts`はUTF-16半開区間の非重複runsを管理します。textareaへ渡す前にCRLF/CRをLFへ統一してrunsを移動し、indexed layoutが元本文offsetを段落整形／改ページ後にも保持します。新しい文字は標準で、範囲内挿入は既存runを分割します。Issue #15で自動字下げは空白のない段落だけに適用し、手入力・貼り付けの行頭/途中の半角空白・全角空白・タブと空行を保持するよう修正しました。OFFでは字下げの空セルを補わず入力どおりに組みます。どちらも本文やUTF-16 offsetは変更しません。
+`text-orientation.ts` manages non-overlapping runs using UTF-16 half-open ranges. Before passing text to the textarea, CRLF/CR are normalized to LF and runs are rebased. Indexed layout preserves original text offsets through paragraph formatting and pagination. New characters use Standard, and insertion inside a run splits the existing run. Issue #15 changed automatic paragraph indentation to apply only to paragraphs without leading spaces, preserving manually typed or pasted half-width spaces, full-width spaces, tabs at the start or within lines, and blank lines. With indentation OFF, layout follows the input without adding empty indentation cells. Neither mode changes the source text or UTF-16 offsets.
 
-本文とrunsを同じ履歴へ保存し、Ctrl/Cmd+Z、Ctrl+Y／Cmd+Shift+Z、beforeinput historyUndo/Redoで復元します。履歴上限は100操作で、IMEの一回の確定は一操作です。通常の各入力・削除・書式変更は一操作として扱います。保存はversion付き`genkou:document`、旧`kantan:source-text`から移行し、本文のみの互換保存も続けます。
+Text and runs share one history and are restored with Ctrl/Cmd+Z, Ctrl+Y / Cmd+Shift+Z, and beforeinput historyUndo/Redo. History is limited to 100 operations. One IME commit is one operation; each normal input, deletion, or formatting change is also one operation. Versioned `genkou:document` storage migrates from the old `kantan:source-text` value and continues saving a text-only compatibility copy.
 
-印刷リンクはv1を継続読取り、指定を含むリンクのみv2＋JSON runsを使用します。仕様はpublic/llms.txt。「本文と設定のリンクをコピー」は本文を含むため、共有先に本文が見えることを前提に利用します。URL自体はfragmentだけへ本文を格納します。入力上限・形式検証に失敗した場合やclipboard失敗時には成功通知を出しません。
+Print links continue to read v1. Links containing orientation overrides use v2 plus JSON runs. See public/llms.txt for the specification. The “Copy text and settings link” (「本文と設定のリンクをコピー」) action includes the text, so recipients can read it. The URL stores the text only in the fragment. No success notification is shown if length or format validation fails, or if clipboard copying fails.
 
-文字の向きはglyph内spanのhorizontal writing-modeと90度transformで描画し、プレビュー・印刷とhtml2canvas経由PDFを揃えます。CSS text-orientationだけへの依存は避けています。
+Character orientation is rendered with horizontal writing-mode on a span inside each glyph and a 90-degree transform, keeping preview, print, and html2canvas PDF output aligned. It does not rely solely on CSS text-orientation.
 
-単語・行単位の削除も、beforeinputの種別とinput後のカーソル位置から実際に消えた範囲を特定します。同じ文字が連続していても残った側の方向指定を維持します。保存容量不足などで本文＋書式の保存に失敗した場合は古い結合保存を無効化し、可能なら最新本文だけを保存します。その場合は文字方向の未保存を画面に表示し、本文すら保存できない場合も閉じる前に控えるよう継続して案内します。結合保存が成功した場合は、互換用本文保存の失敗があっても結合保存から復元できます。
+Word and line deletions identify the actual deleted range from the beforeinput type and the cursor position after input. Even when identical characters repeat, orientation overrides stay with the surviving characters. If saving text and formatting together fails, for example because storage is full, the old combined save is invalidated and the latest text alone is saved when possible. The UI then warns that orientation changes were not saved. If even the text cannot be saved, it keeps advising the user to make a copy before closing. When the combined save succeeds, it can restore the document even if saving the text-only compatibility copy fails.
 
+## Service mark on manuscript pages (Issue #22)
 
-## 紙面のサービス表記（Issue #22）
+Preview, print, and PDF use the same `ManuscriptPage`. The lower-left mark is consistently `genkou.snkisk.com` from `paperServiceMark`. It appears when margins are at least 10%; with smaller margins it remains hidden to avoid overlapping the grid. The visibility toggle, text, PDF filename, and service name in the header and SEO metadata remain unchanged.
 
-プレビュー・印刷・PDFは同じ `ManuscriptPage` の紙面を使い、左下の表記は `paperServiceMark` の `genkou.snkisk.com` で共通です。10%以上の余白で表示し、それ未満の余白では既存どおり罫線との重なりを避けて非表示にします。表示のON/OFF、本文、PDF名、ヘッダーやSEOのサービス名はそのまま維持します。
+## Type checking brand asset contract tests (Issue #35)
 
+`lib/brand-assets.test.ts` is included in the existing `tsconfig.app.json` `src` scope and is checked in strict mode by `npm run typecheck`. Using keys from the JSON asset registry and the Worker's `Env`, `npx vitest run src/lib/brand-assets.test.ts` checks CDN references, favicon responses, and contracts for both the product and guide hosts. If the favicon has not been generated, run `npm run prepare:favicon` first.
 
-## ブランド素材の契約テストの型検査（Issue #35）
-
-`lib/brand-assets.test.ts` は既存の `tsconfig.app.json` の `src` 対象に含まれ、`npm run typecheck` でstrict検査されます。JSON素材台帳のキーとWorkerの `Env` を使い、CDN参照・favicon応答・製品と使い方ページの両ホストの契約を `npx vitest run src/lib/brand-assets.test.ts` で確認します。faviconが未生成の場合は先に `npm run prepare:favicon` を実行します。
-
-`scripts/` の生成・取得処理とfavicon testもNode用strict型検査の対象です。実行条件と確認手順は [`scripts/README.md`](../scripts/README.md) を参照してください。
+The generators, fetch preparation, and favicon test in `scripts/` are also covered by Node strict type checking. See [`scripts/README.md`](../scripts/README.md) for runtime requirements and verification steps.

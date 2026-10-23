@@ -1,20 +1,20 @@
-# 開発用script
+# Development scripts
 
-## ブランド素材の生成
+## Generate brand assets
 
-`npm run generate:brand-assets` は `assets/brand/brand-icon.svg` と `og-image.svg` を原本として、既存の `generated/brand-assets/` にSVG・PNG・WebP・ICO計11ファイルを生成します。出力はGit対象外で、publicへのコピーやCDN uploadは行いません。
+`npm run generate:brand-assets` uses `assets/brand/brand-icon.svg` and `og-image.svg` as sources and generates 11 SVG, PNG, WebP, and ICO files in the existing `generated/brand-assets/` directory. Output is ignored by Git; the command does not copy it to public or upload it to the CDN.
 
-`generate-brand-assets.mts` は `npm run typecheck` で既存Node用strict設定の検査対象です。Nodeの型消去機能で実行するため、Node22.6以降を使用し、型変換を要する構文は `erasableSyntaxOnly` で拒否します。CIはNode22です。型消去は型検査を実行しないため、実行前にtypecheckを通します。
+`generate-brand-assets.mts` is covered by the existing Node strict configuration through `npm run typecheck`. It runs with Node's type stripping, requiring Node 22.6 or later. `erasableSyntaxOnly` rejects syntax that would require transformation. CI uses Node 22. Type stripping does not perform type checking, so run typecheck before execution.
 
-画像Mapは固定の6サイズをすべてawaitして格納した後だけ参照します。`Map.get` の非null指定はこの内部順序の証明に基づき、外部入力の検証を代替しません。SVG、Sharp設定、サイズ、ICO並び、出力pathは旧JSと同じです。旧JSと新TSからの全11出力を同じ環境でbyte比較して確認します。
+The image Map is read only after all six fixed sizes have been awaited and stored. The non-null assertion on `Map.get` relies on this internal ordering and does not replace validation of external input. SVGs, Sharp settings, sizes, ICO ordering, and output paths match the previous JavaScript implementation. Compare all 11 outputs from the old JavaScript and new TypeScript byte for byte in the same environment to verify equivalence.
 
-## 配信用faviconの準備
+## Prepare the delivered favicon
 
-`npm run prepare:favicon` は `prepare-favicon.mts` を同じNodeの型消去で実行します。build・dev・test前にも同じ処理が走ります。準備処理と `prepare-favicon.test.ts` はNode用strict型検査の対象です。
+`npm run prepare:favicon` runs `prepare-favicon.mts` with the same Node type stripping. Preparation also runs before build, dev, and test. Both preparation and `prepare-favicon.test.ts` are covered by Node strict type checking.
 
-JSON読取り結果をunknownとして扱い、object・配列・各値の型を確認してから、既存の固定出力path、CDN origin/path、PNG16/32/48の順序、MIME、size、SHA256、ICO合計sizeを検証します。検証済み値から台帳を組み立てるため、型assertionで外部入力を通しません。不正なJSON構造もネットワーク取得・ICO書込み前に拒否します。
+Parsed JSON is treated as unknown. After checking objects, arrays, and each value's type, preparation validates the existing fixed output path, CDN origin/path, PNG16/32/48 ordering, MIME types, sizes, SHA256 hashes, and total ICO size. It constructs the registry from validated values instead of using type assertions to bypass external-input checks. Invalid JSON structures are rejected before network fetching or ICO writes.
 
-PNGキャッシュはcheckout外で、onlineのcache miss時だけ取得します。warm cacheは `GENKOU_ASSETS_OFFLINE=1 npm run prepare:favicon` で復元できます。破損cache、取得不一致、symlinkを拒否し、失敗時に元のICOを保持する契約をテストします。既存の正規台帳からは同じ1808-byte ICOを生成します。
+The PNG cache lives outside the checkout; files are fetched only on an online cache miss. A warm cache can be restored with `GENKOU_ASSETS_OFFLINE=1 npm run prepare:favicon`. Tests cover rejection of corrupt caches, download mismatches, and symlinks, and preservation of the original ICO on failure. The existing canonical registry produces the same 1808-byte ICO.
 
 ```sh
 npm run typecheck
@@ -22,4 +22,4 @@ GENKOU_ASSETS_OFFLINE=1 npm test
 GENKOU_ASSETS_OFFLINE=1 npm run build
 ```
 
-cold cacheでは先にonlineで準備します。編集用ブランド素材の生成と配信用PNG取得は別の処理です。製品docs・llms・privacyは維持します。
+Prepare online first when the cache is cold. Generating editable brand assets and fetching delivery PNGs are separate operations. Preserve the product docs, llms, and privacy content.
