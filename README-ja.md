@@ -25,11 +25,11 @@
 npm run generate:brand-assets
 ```
 
-再生成先はGit管理外の `generated/brand-assets/` です。publicへ画像を再配置せず、CDNへのuploadも行いません。デザイン変更時は出力を確認し、正規のadminUIで再upload・公開bytes確認後にmappingとHTML/manifestを更新してください。PNGの生成は利用フォント環境にも依存するため、同じURLへ未確認の再生成画像を置き換えません。
+再生成先はGit管理外の `generated/brand-assets/` です。publicへ画像を再配置せず、CDNへのuploadも行いません。デザイン変更時は出力を確認し、正規のadminUIで再uploadし、公開されたbytesを確認してから、mappingとHTML/manifestを更新してください。PNGの生成は利用フォント環境にも依存するため、同じURLへ未確認の再生成画像を置き換えません。
 
 `public/favicon.ico` はGit非保持の互換生成物です。adminUIへICOをuploadせず、`assets/brand/favicon-inputs.json` の確定CDN PNG16/32/48をSHA/MIME/bytesで検証し、build/dev/test前に従来と同じ1808bytesのICOを組み立てます。`/favicon.ico` のsame-origin配信と16/32/48px fallbackは維持します。ブラウザの明示PNG/SVG参照は既存CDNのままです。最終ICOはcompatibility用のsame-origin build artifactで、画像正本はR2にあります。SVGからの編集用render結果を自動でpublicへ同期しません。
 
-PNG cacheはGit外の`~/.cache/genkou/favicon`（`GENKOU_ASSET_CACHE_DIR`で指定可能）。初回準備は接続が必要で、warm cacheは`GENKOU_ASSETS_OFFLINE=1 npm run build`で復元できます。cold offline miss・corrupt cache・取得不一致はfailし、未検証ICOを公開しません。新しいブランドへ更新する場合はownerが原本確認後にPNGのURL/hashとICOの出力hashを更新してください。
+PNG cacheはGit外の`~/.cache/genkou/favicon`に保存します。保存先は`GENKOU_ASSET_CACHE_DIR`で指定できます。初回準備は接続が必要で、warm cacheは`GENKOU_ASSETS_OFFLINE=1 npm run build`で復元できます。cold offline miss・corrupt cache・取得不一致がある場合はfailし、未検証ICOを公開しません。新しいブランドへ更新する場合はownerが原本を確認してから、PNGのURL/hashとICOの出力hashを更新してください。
 
 ```sh
 npm ci
@@ -39,7 +39,7 @@ npm run build
 ```
 
 
-manifest自身はsame-originの `/site.webmanifest` に残し、id/start_url/scope/displayを変更しません。新しいservice workerやoffline機能は追加しません。CDN画像の通常表示、CORSによるJS読取、ブラウザのmanifest処理、Appleホーム画面追加は別の確認項目です。OSへのインストール・Apple実機・タブ内faviconの最終採用は実機で未確認のまま成功扱いしません。印刷/PDFのcapture対象は紙面だけで、headerのCDNマークをcanvasへ描画しません。
+manifest自身はsame-originの `/site.webmanifest` に残し、id/start_url/scope/displayを変更しません。新しいservice workerやoffline機能は追加しません。CDN画像の通常表示、CORSによるJS読取、ブラウザのmanifest処理、Appleホーム画面追加は別の確認項目です。OSへのインストール・Apple実機・タブ内faviconの最終採用は、実機で確認していないまま成功扱いしません。印刷/PDFのcapture対象は紙面だけで、headerのCDNマークをcanvasへ描画しません。
 
 ## AIで作った文章を印刷する
 
