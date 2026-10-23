@@ -14,7 +14,7 @@ type PaperId = 'b5' | 'a4'
 type PaperOrientation = 'portrait' | 'landscape'
 type CompositionId = '10x20' | '14x14' | '16x25' | '20x10' | '20x20' | '20x25' | '25x16' | '25x20' | '30x40' | '40x30' | '40x40'
 type Margin = 'narrow' | 'standard' | 'wide' | 'custom'
-type Status = { tone: 'success' | 'error'; message: string; retryPdf?: boolean; printLinkError?: 'invalid' | 'too-long' } | null
+type Status = { tone: 'success' | 'error'; message: string; messageKey?: 'pdfReady' | 'pdfError' | 'printReady' | 'linkSuccess' | 'linkError'; retryPdf?: boolean; printLinkError?: 'invalid' | 'too-long' } | null
 type LanguagePreference = Language | 'system'
 
 const defaultLanguage = (): Language => {
@@ -55,6 +55,22 @@ const directionOptions = ['vertical', 'horizontal'] as const
 const paperOrientationOptions = ['portrait', 'landscape'] as const
 const marginPercentages: Record<Exclude<Margin, 'custom'>, number> = { narrow: 10, standard: 20, wide: 30 }
 const cssPixelInMillimeters = 25.4 / 96
+const noticeDuration = 4500
+
+function NoticeProgress({ notice }: { notice: NonNullable<Status> }) {
+  const [remaining, setRemaining] = useState(1)
+  useEffect(() => {
+    setRemaining(1)
+    const started = performance.now()
+    const timer = window.setInterval(() => {
+      const next = Math.max(0, 1 - (performance.now() - started) / noticeDuration)
+      setRemaining(next)
+      if (next === 0) window.clearInterval(timer)
+    }, 100)
+    return () => window.clearInterval(timer)
+  }, [notice])
+  return <span className="toast-progress" aria-hidden="true" style={{ transform: `scaleX(${remaining})` }} />
+}
 
 function updateDocumentMetadata(title: string, description: string) {
   document.title = title
@@ -125,10 +141,59 @@ function hasManualLanguagePreference(): boolean {
 }
 
 function InfoButton({ label, content }: { label: string; content: string }) {
-  const [open, setOpen] = useState(false)
-  return <span className="info-wrap">
-    <button type="button" className="info-button" aria-label={label} aria-expanded={open} onClick={() => setOpen(!open)}>i</button>
-    {open && <span role="status" className="info-popover">{content}</span>}
+  const id = useId()
+  const wrapper = useRef<HTMLSpanElement>(null)
+  const panel = useRef<HTMLSpanElement>(null)
+  const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const [pinned, setPinned] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+  const [position, setPosition] = useState<{ left: number; top: number; maxHeight?: number }>({ left: 0, top: 0 })
+  const open = !dismissed && (hovered || focused || pinned)
+
+  useLayoutEffect(() => {
+    if (!open) return
+    const place = (event?: Event) => {
+      if (!wrapper.current || !panel.current) return
+      const anchor = wrapper.current.getBoundingClientRect()
+      const note = panel.current.getBoundingClientRect()
+      const gutter = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--space-1'))
+      if (event?.type === 'scroll' && (anchor.bottom <= gutter || anchor.top >= window.innerHeight - gutter)) { setDismissed(true); return }
+      const below = Math.max(0, window.innerHeight - gutter - anchor.bottom)
+      const above = Math.max(0, anchor.top - gutter)
+      const naturalHeight = panel.current.scrollHeight + (note.height - panel.current.clientHeight)
+      const useBelow = below >= naturalHeight || below >= above
+      const maxHeight = Math.min(window.innerHeight - gutter * 2, useBelow ? below : above)
+      const top = useBelow ? anchor.bottom : anchor.top - Math.min(naturalHeight, maxHeight)
+      setPosition({
+        left: Math.max(gutter, Math.min(anchor.right - note.width, document.documentElement.clientWidth - note.width - gutter)),
+        top: Math.max(gutter, top), maxHeight,
+      })
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true) }
+  }, [open, content])
+
+  useEffect(() => {
+    if (!open) return
+    const dismiss = () => { setDismissed(true); setPinned(false) }
+    const outside = (event: PointerEvent) => { if (!wrapper.current?.contains(event.target as Node)) dismiss() }
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') dismiss() }
+    document.addEventListener('pointerdown', outside)
+    document.addEventListener('keydown', escape)
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape) }
+  }, [open])
+
+  return <span ref={wrapper} className="info-wrap"
+    onPointerEnter={(event) => { if (event.pointerType === 'mouse') { setHovered(true); setDismissed(false) } }}
+    onPointerLeave={(event) => { if (event.pointerType === 'mouse') setHovered(false) }}
+    onFocus={() => { setFocused(true); setDismissed(false) }}
+    onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) { setFocused(false); setPinned(false) } }}>
+    <button type="button" className="info-button" aria-label={label} aria-expanded={open} aria-controls={open ? id : undefined} aria-describedby={open ? id : undefined}
+      onClick={() => { setPinned(!pinned); setDismissed(pinned) }}>i</button>
+    {open && <span ref={panel} id={id} role="note" tabIndex={0} className="info-popover" style={position}>{content}</span>}
   </span>
 }
 
@@ -647,8 +712,8 @@ function ManuscriptApp() {
   }, [applyPrintLink])
 
   useEffect(() => {
-    if (!status) return
-    const timer = window.setTimeout(() => setStatus(null), 4500)
+    if (!status || status.tone === 'error') return
+    const timer = window.setTimeout(() => setStatus(null), noticeDuration)
     return () => window.clearTimeout(timer)
   }, [status])
 
@@ -666,9 +731,9 @@ function ManuscriptApp() {
         doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, selectedPaper.width, selectedPaper.height)
       }
       doc.save(`原稿小箱-${paper}-${direction}.pdf`)
-      setStatus({ tone: 'success', message: labels.pdfReady })
+      setStatus({ tone: 'success', message: labels.pdfReady, messageKey: 'pdfReady' })
     } catch {
-      setStatus({ tone: 'error', message: labels.pdfError, retryPdf: true })
+      setStatus({ tone: 'error', message: labels.pdfError, messageKey: 'pdfError', retryPdf: true })
     } finally {
       setPending(null)
     }
@@ -692,6 +757,9 @@ function ManuscriptApp() {
   const documentLinkLabel = language === 'ja' ? '本文と設定のリンクをコピー' : 'Copy text and settings link'
   const documentLinkSuccess = language === 'ja' ? '本文と設定のリンクをコピーしました。' : 'Copied a link with text and settings.'
   const documentLinkError = language === 'ja' ? 'リンクをコピーできませんでした。本文の長さや設定を確認し、下にリンクが表示されている場合は選択してコピーしてください。' : 'Could not copy the link. Check text length and settings, or select and copy the link below when available.'
+  const statusMessage = status?.messageKey === 'linkSuccess' ? documentLinkSuccess
+    : status?.messageKey === 'linkError' ? documentLinkError
+      : status?.messageKey ? labels[status.messageKey] : status?.message
 
   const print = () => {
     if (pending || !layoutSupported) return
@@ -699,7 +767,7 @@ function ManuscriptApp() {
     window.setTimeout(() => {
       window.print()
       setPending(null)
-      setStatus({ tone: 'success', message: labels.printReady })
+      setStatus({ tone: 'success', message: labels.printReady, messageKey: 'printReady' })
     }, 80)
   }
 
@@ -720,7 +788,7 @@ function ManuscriptApp() {
       </div>
       <div className="home-actions">
         <div className="root-prompt" role="group" aria-label={documentLinkLabel}>
-          <PromptCopyButton showFeedback={activeCopyFeedback === 'link'} onCopyStart={() => setActiveCopyFeedback('link')} text={documentLink ?? ''} invalid={documentLink === null} labels={{ ...documentationCopy[language], copyPrompt: documentLinkLabel, copyPromptError: documentLinkError }} compact fallbackLabel={language === 'ja' ? 'コピー用の本文と設定リンク' : 'Text and settings link to copy'} onCopied={() => setStatus({ tone: 'success', message: documentLinkSuccess })} onError={() => setStatus({ tone: 'error', message: documentLinkError })} />
+          <PromptCopyButton showFeedback={activeCopyFeedback === 'link'} onCopyStart={() => setActiveCopyFeedback('link')} text={documentLink ?? ''} invalid={documentLink === null} labels={{ ...documentationCopy[language], copyPrompt: documentLinkLabel, copyPromptError: documentLinkError }} compact fallbackLabel={language === 'ja' ? 'コピー用の本文と設定リンク' : 'Text and settings link to copy'} onCopied={() => setStatus({ tone: 'success', message: documentLinkSuccess, messageKey: 'linkSuccess' })} onError={() => setStatus({ tone: 'error', message: documentLinkError, messageKey: 'linkError' })} />
         </div>
         <RootPrintPrompt showFeedback={activeCopyFeedback === 'prompt'} onCopyStart={() => setActiveCopyFeedback('prompt')} key={language} prompt={rootPromptCopy[language]} labels={documentationCopy[language]} />
       </div>
@@ -776,6 +844,6 @@ function ManuscriptApp() {
       <a href={`mailto:${labels.contact}`}>{labels.contact}</a>
     </footer>
 
-    {status && <div className={`toast ${status.tone}`} role="status"><span>{status.message}</span>{status.retryPdf && <button type="button" className="toast-retry" onClick={savePdf}>{labels.retry}</button>}<button type="button" aria-label={labels.close} onClick={() => setStatus(null)}>×</button></div>}
+    {status && <div className={`toast ${status.tone}`} role="status"><span>{statusMessage}</span>{status.retryPdf && <button type="button" className="toast-retry" disabled={pending !== null || !layoutSupported} aria-busy={pending === 'pdf'} aria-describedby={!layoutSupported ? 'layout-unavailable' : undefined} onClick={savePdf}>{pending === 'pdf' ? labels.saving : labels.retry}</button>}<button type="button" aria-label={labels.close} onClick={() => setStatus(null)}>×</button>{status.tone === 'success' && <NoticeProgress notice={status} />}</div>}
   </main>
 }
